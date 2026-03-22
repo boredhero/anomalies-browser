@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# uv
+.python-version
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Data (large files, never commit)
+data/
+*.laz
+*.las
+*.copc
+*.tif
+*.tiff
+*.geotiff
+
+# ML models
+*.pt
+*.pth
+*.onnx
+*.joblib
+*.pkl
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Docker volumes (local dev)
+pgdata/
+redisdata/

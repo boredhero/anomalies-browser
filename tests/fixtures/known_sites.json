@@ -1,0 +1,31 @@
+{
+  "validation_sites": [
+    {"name": "Laurel Caverns", "lat": 39.7996, "lon": -79.7117, "type": "cave_entrance", "state": "PA", "county": "Fayette", "confidence": "very_high"},
+    {"name": "Penn's Cave", "lat": 40.8826, "lon": -77.6119, "type": "cave_entrance", "state": "PA", "county": "Centre", "confidence": "very_high"},
+    {"name": "Lincoln Caverns", "lat": 40.5075, "lon": -78.0713, "type": "cave_entrance", "state": "PA", "county": "Huntingdon", "confidence": "very_high"},
+    {"name": "Tytoona Cave", "lat": 40.6021, "lon": -78.2172, "type": "cave_entrance", "state": "PA", "county": "Blair", "confidence": "very_high"},
+    {"name": "Crystal Cave", "lat": 40.5257, "lon": -75.8426, "type": "cave_entrance", "state": "PA", "county": "Berks", "confidence": "high"},
+    {"name": "Woodward Cave", "lat": 40.8881, "lon": -77.3873, "type": "cave_entrance", "state": "PA", "county": "Centre", "confidence": "high"},
+    {"name": "Lost River Caverns", "lat": 40.5808, "lon": -75.331, "type": "cave_entrance", "state": "PA", "county": "Northampton", "confidence": "high"},
+    {"name": "Indian Echo Caverns", "lat": 40.2541, "lon": -76.7171, "type": "cave_entrance", "state": "PA", "county": "Dauphin", "confidence": "high"},
+    {"name": "Harlansburg Cave", "lat": 41.1, "lon": -80.4, "type": "cave_entrance", "state": "PA", "county": "Lawrence", "confidence": "medium"},
+
+    {"name": "Tour-Ed Mine", "lat": 40.6175, "lon": -79.7605, "type": "mine_portal", "state": "PA", "county": "Allegheny", "confidence": "very_high"},
+    {"name": "Pioneer Tunnel", "lat": 40.88, "lon": -76.13, "type": "mine_portal", "state": "PA", "county": "Schuylkill", "confidence": "medium"},
+    {"name": "Lackawanna Coal Mine", "lat": 41.4, "lon": -75.6, "type": "mine_portal", "state": "PA", "county": "Lackawanna", "confidence": "medium"},
+    {"name": "No. 9 Mine", "lat": 40.82, "lon": -75.88, "type": "mine_portal", "state": "PA", "county": "Carbon", "confidence": "medium"},
+    {"name": "Centralia", "lat": 40.81, "lon": -76.35, "type": "mine_portal", "state": "PA", "county": "Columbia", "confidence": "medium"},
+
+    {"name": "Lost World Caverns", "lat": 37.8326, "lon": -80.4469, "type": "cave_entrance", "state": "WV", "county": "Greenbrier", "confidence": "very_high"},
+    {"name": "Organ Cave", "lat": 37.718, "lon": -80.4369, "type": "cave_entrance", "state": "WV", "county": "Greenbrier", "confidence": "very_high"},
+    {"name": "Seneca Caverns WV", "lat": 38.7631, "lon": -79.3885, "type": "cave_entrance", "state": "WV", "county": "Randolph", "confidence": "high"},
+    {"name": "McClung Cave", "lat": 38.0379, "lon": -80.7268, "type": "cave_entrance", "state": "WV", "county": "Greenbrier", "confidence": "high"},
+    {"name": "Friars Hole", "lat": 38.0673, "lon": -80.3292, "type": "cave_entrance", "state": "WV", "county": "Greenbrier", "confidence": "high"},
+
+    {"name": "Ohio Caverns", "lat": 40.239, "lon": -83.6979, "type": "cave_entrance", "state": "OH", "county": "Champaign", "confidence": "very_high"},
+    {"name": "Zane Shawnee Caverns", "lat": 40.3796, "lon": -83.6366, "type": "cave_entrance", "state": "OH", "county": "Logan", "confidence": "high"},
+
+    {"name": "Howe Caverns", "lat": 42.6962, "lon": -74.3986, "type": "cave_entrance", "state": "NY", "county": "Schoharie", "confidence": "very_high"},
+    {"name": "Lockport Cave", "lat": 43.1706, "lon": -78.6903, "type": "cave_entrance", "state": "NY", "county": "Niagara", "confidence": "high"}
+  ]
+}
