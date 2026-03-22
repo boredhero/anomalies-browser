@@ -56,7 +56,7 @@ class TestAllPassesRegistered:
             assert name in passes, f"Pass {name!r} not registered"
 
     def test_pass_count(self):
-        assert len(PassRegistry.list_passes()) == 8
+        assert len(PassRegistry.list_passes()) == 11  # 8 classical + 3 ML
 
 
 # --- LocalReliefModelPass ---

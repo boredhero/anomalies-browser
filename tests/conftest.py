@@ -16,12 +16,13 @@ def ensure_passes_registered():
     from magic_eyes.detection.passes import (
         fill_difference, local_relief_model, curvature,
         sky_view_factor, tpi, point_density, multi_return,
-        morphometric_filter,
+        morphometric_filter, random_forest, unet_segmentation, yolo_detector,
     )
 
     # Force re-registration if registry was cleared
     for mod in [fill_difference, local_relief_model, curvature, sky_view_factor,
-                tpi, point_density, multi_return, morphometric_filter]:
+                tpi, point_density, multi_return, morphometric_filter,
+                random_forest, unet_segmentation, yolo_detector]:
         importlib.reload(mod)
     importlib.reload(passes_mod)
     yield
