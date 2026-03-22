@@ -18,9 +18,11 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Magic Eyes",
-        description="LiDAR terrain anomaly detection API",
+        description="LiDAR terrain anomaly detection API — caves, mines, sinkholes",
         version="0.1.0",
         lifespan=lifespan,
+        docs_url="/api/docs",
+        openapi_url="/api/openapi.json",
     )
 
     app.add_middleware(
@@ -31,18 +33,32 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Register routes
-    from magic_eyes.api.routes import detections, jobs, datasets, regions, validation
+    # Register all routes
+    from magic_eyes.api.routes import (
+        detections,
+        jobs,
+        datasets,
+        regions,
+        validation,
+        exports,
+        tiles,
+        raster_tiles,
+        websocket,
+    )
 
     app.include_router(detections.router, prefix="/api")
     app.include_router(jobs.router, prefix="/api")
     app.include_router(datasets.router, prefix="/api")
     app.include_router(regions.router, prefix="/api")
     app.include_router(validation.router, prefix="/api")
+    app.include_router(exports.router, prefix="/api")
+    app.include_router(tiles.router, prefix="/api")
+    app.include_router(raster_tiles.router, prefix="/api")
+    app.include_router(websocket.router)
 
     @app.get("/api/health")
     async def health():
-        return {"status": "ok"}
+        return {"status": "ok", "version": "0.1.0"}
 
     return app
 
