@@ -111,10 +111,14 @@ class ResultFuser:
         # Majority vote for feature type
         feature_type = max(feature_type_votes, key=feature_type_votes.get)
 
-        # Average morphometrics
-        avg_morphometrics = {
-            key: float(np.mean(vals)) for key, vals in all_morphometrics.items()
-        }
+        # Average morphometrics (skip non-numeric values)
+        avg_morphometrics = {}
+        for key, vals in all_morphometrics.items():
+            numeric_vals = [v for v in vals if isinstance(v, (int, float))]
+            if numeric_vals:
+                avg_morphometrics[key] = float(np.mean(numeric_vals))
+            else:
+                avg_morphometrics[key] = vals[0]  # keep first non-numeric value
 
         # Use largest outline if available
         outline = None

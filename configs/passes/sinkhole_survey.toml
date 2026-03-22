@@ -1,0 +1,41 @@
+[pipeline]
+name = "sinkhole_survey"
+description = "Optimized for sinkhole detection — highest recall"
+passes = [
+    "fill_difference",
+    "tpi",
+    "curvature",
+    "sky_view_factor",
+    "morphometric_filter",
+]
+min_confidence = 0.3
+
+[weights]
+fill_difference = 1.5
+tpi = 1.3
+curvature = 0.8
+sky_view_factor = 1.0
+morphometric_filter = 0.0
+
+[passes.fill_difference]
+min_depth_m = 0.5
+min_area_m2 = 100
+max_area_m2 = 10000
+
+[passes.tpi]
+threshold = -1.0
+radius_m = 15
+
+[passes.curvature]
+type = "total"
+threshold = -0.01
+
+[passes.sky_view_factor]
+radius_m = 30
+n_directions = 16
+threshold = 0.8
+
+[passes.morphometric_filter]
+min_depth_m = 0.5
+max_area_m2 = 10000
+min_circularity = 0.3

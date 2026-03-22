@@ -2,12 +2,11 @@
 
 from pathlib import Path
 from typing import Any
-from uuid import UUID
 
 import numpy as np
 import rasterio
 
-from magic_eyes.detection.base import Candidate, DetectionPass, PassInput
+from magic_eyes.detection.base import Candidate, PassInput
 from magic_eyes.detection.fusion import ResultFuser
 from magic_eyes.detection.registry import PassRegistry
 
@@ -20,10 +19,36 @@ class PassRunner:
         pass_names: list[str],
         config: dict[str, Any] | None = None,
         weights: dict[str, float] | None = None,
+        min_confidence: float = 0.3,
     ):
         self.passes = PassRegistry.get_pass_chain(pass_names)
         self.config = config or {}
-        self.fuser = ResultFuser(weights=weights)
+        self.fuser = ResultFuser(weights=weights, min_confidence=min_confidence)
+
+    @classmethod
+    def from_toml(cls, toml_path: Path) -> "PassRunner":
+        """Create a PassRunner from a TOML configuration file."""
+        import tomllib
+
+        with open(toml_path, "rb") as f:
+            data = tomllib.load(f)
+
+        pipeline = data.get("pipeline", {})
+        pass_names = pipeline.get("passes", [])
+        min_confidence = pipeline.get("min_confidence", 0.3)
+        weights = data.get("weights", {})
+
+        # Flatten pass configs: {"passes": {"fill_difference": {...}}} → {"passes.fill_difference": {...}}
+        config = {}
+        for pass_name, pass_config in data.get("passes", {}).items():
+            config[f"passes.{pass_name}"] = pass_config
+
+        return cls(
+            pass_names=pass_names,
+            config=config,
+            weights=weights,
+            min_confidence=min_confidence,
+        )
 
     def run_on_dem(
         self,
@@ -44,6 +69,20 @@ class PassRunner:
                 with rasterio.open(path) as src:
                     loaded_derivatives[name] = src.read(1).astype(np.float32)
 
+        return self.run_on_array(dem, transform, crs, loaded_derivatives, point_cloud)
+
+    def run_on_array(
+        self,
+        dem: np.ndarray,
+        transform: Any,
+        crs: int,
+        derivatives: dict[str, np.ndarray] | None = None,
+        point_cloud: Any | None = None,
+    ) -> list[Candidate]:
+        """Run all passes on in-memory arrays and return fused candidates."""
+        if derivatives is None:
+            derivatives = {}
+
         # Run each pass
         all_candidates: list[tuple[str, Candidate]] = []
         for detection_pass in self.passes:
@@ -52,13 +91,18 @@ class PassRunner:
                 dem=dem,
                 transform=transform,
                 crs=crs,
-                derivatives=loaded_derivatives,
+                derivatives=derivatives,
                 point_cloud=point_cloud if detection_pass.requires_point_cloud else None,
                 config=pass_config,
             )
-            candidates = detection_pass.run(pass_input)
-            for candidate in candidates:
-                all_candidates.append((detection_pass.name, candidate))
+
+            try:
+                candidates = detection_pass.run(pass_input)
+                for candidate in candidates:
+                    all_candidates.append((detection_pass.name, candidate))
+            except Exception as e:
+                from magic_eyes.utils.logging import log
+                log.warning("pass_failed", pass_name=detection_pass.name, error=str(e))
 
         # Fuse results from multiple passes
         return self.fuser.fuse(all_candidates)

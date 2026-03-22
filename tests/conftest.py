@@ -13,10 +13,16 @@ def ensure_passes_registered():
     """Ensure all passes are registered before each test."""
     import importlib
     import magic_eyes.detection.passes as passes_mod
-    import magic_eyes.detection.passes.fill_difference as fd_mod
+    from magic_eyes.detection.passes import (
+        fill_difference, local_relief_model, curvature,
+        sky_view_factor, tpi, point_density, multi_return,
+        morphometric_filter,
+    )
 
     # Force re-registration if registry was cleared
-    importlib.reload(fd_mod)
+    for mod in [fill_difference, local_relief_model, curvature, sky_view_factor,
+                tpi, point_density, multi_return, morphometric_filter]:
+        importlib.reload(mod)
     importlib.reload(passes_mod)
     yield
 
