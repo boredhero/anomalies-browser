@@ -398,6 +398,43 @@ def run_full_pipeline(self, job_id: str, region_name: str | None, pass_config: s
                     ctx["error"] = str(e)
                     continue
 
+            # Cleanup: delete raw COPC + intermediate derivatives
+            # Keep: DEM (for re-running detection) + hillshade (for map tiles)
+            # Raw tiles can be re-downloaded if DEM needs regenerating
+            with profiler.stage(f"cleanup_tile_{i}", parent="tile_cleanup") as ctx:
+                freed_bytes = 0
+
+                # Delete raw COPC/LAZ file
+                raw_path = Path(tile_path)
+                if raw_path.exists():
+                    sz = raw_path.stat().st_size
+                    raw_path.unlink()
+                    freed_bytes += sz
+                    log.info("cleanup_raw", path=str(raw_path), freed_mb=round(sz / 1e6, 1))
+
+                # Delete intermediate derivatives (keep DEM + hillshade)
+                keep_derivatives = {"hillshade"}
+                if tile_result and tile_result.derivative_paths:
+                    for name, deriv_path in tile_result.derivative_paths.items():
+                        if name in keep_derivatives:
+                            continue
+                        p = Path(deriv_path)
+                        if p.exists():
+                            sz = p.stat().st_size
+                            p.unlink()
+                            freed_bytes += sz
+
+                # Delete filled DEM (can regenerate from DEM)
+                if tile_result and tile_result.filled_dem_path:
+                    filled = Path(tile_result.filled_dem_path)
+                    if filled.exists():
+                        sz = filled.stat().st_size
+                        filled.unlink()
+                        freed_bytes += sz
+
+                ctx["freed_mb"] = round(freed_bytes / 1e6, 1)
+                log.info("tile_cleanup_complete", freed_mb=round(freed_bytes / 1e6, 1))
+
         profile_summary = profiler.log_summary()
 
         _update_job("COMPLETED", 100, summary={
