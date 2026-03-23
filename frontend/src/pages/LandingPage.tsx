@@ -208,7 +208,7 @@ export default function LandingPage() {
 
   // --- RENDER ---
 
-  // Tour phase: map + swipeable card
+  // Tour phase: map + swipeable card + settings
   if (phase === 'tour') {
     const d = tourDetections[tourIndex];
     return (
@@ -216,6 +216,8 @@ export default function LandingPage() {
         <div className="absolute inset-0">
           <MapView />
         </div>
+        <TopBar />
+        <SettingsPanel />
         {d && (
           <SwipeCard
             detection={d}
