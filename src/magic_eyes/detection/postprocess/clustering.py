@@ -1,5 +1,7 @@
 """Spatial clustering utilities for detection candidates."""
 
+from typing import Any
+
 import numpy as np
 from numpy.typing import NDArray
 from scipy.ndimage import label as ndimage_label
@@ -40,7 +42,7 @@ def label_depressions(
 def extract_candidates_from_labels(
     labeled: NDArray[np.int32],
     dem: NDArray[np.float32],
-    transform: "rasterio.Affine",
+    transform: "Any",
     feature_type: FeatureType = FeatureType.UNKNOWN,
 ) -> list[Candidate]:
     """Convert labeled depression regions to Candidate objects."""

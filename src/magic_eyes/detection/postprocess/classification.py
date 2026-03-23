@@ -12,7 +12,6 @@ def classify_candidate(candidate: Candidate) -> FeatureType:
     depth = m.get("depth_m", 0)
     area = m.get("area_m2", 0)
     circularity = m.get("circularity", 0)
-    m.get("wall_slope_deg", 0)
 
     # Very deep, small, circular = likely cave entrance or pit
     if depth > 3.0 and area < 500 and circularity > 0.4:

@@ -97,7 +97,8 @@ async def export_csv(
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["id", "lat", "lon", "feature_type", "confidence", "depth_m", "area_m2", "circularity", "validated"])
+    headers = ["id", "lat", "lon", "feature_type", "confidence", "depth_m", "area_m2", "circularity", "validated"]
+    writer.writerow(headers)
 
     for d in detections:
         try:
