@@ -1,10 +1,10 @@
-FROM python:3.12-slim
+FROM pdal/pdal:latest
 
-# System deps for geospatial libraries + point cloud processing
+# pdal/pdal already has: PDAL 2.10, GDAL 3.12, Python 3.13, Ubuntu 24.04
+# Just need: pip/uv, libspatialindex (for rtree), and our Python deps
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gdal-bin libgdal-dev libgeos-dev libproj-dev libspatialindex-dev \
-    pdal libpdal-dev \
-    curl git \
+    libspatialindex-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
