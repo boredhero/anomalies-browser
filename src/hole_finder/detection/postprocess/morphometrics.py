@@ -12,6 +12,8 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy import ndimage
 
+from hole_finder.detection.array_backend import region_stats as gpu_region_stats
+
 
 # --- Per-region functions (original API, used by individual callers) ---
 
@@ -115,34 +117,30 @@ def batch_morphometrics(
 
     Returns dict of metric_name → array[num_features], indexed by label-1.
     """
-    labels = np.arange(1, num_features + 1)
     cell_area = resolution_m * resolution_m
 
-    # Areas (pixels and m2)
-    areas_px = ndimage.sum(np.ones_like(dem), labeled, labels).astype(np.float64)
+    # Use GPU-accelerated backend for bulk stats on DEM
+    dem_stats = gpu_region_stats(dem, labeled, num_features)
+    areas_px = dem_stats["areas_px"]
     areas_m2 = areas_px * cell_area
-
-    # Depth: max(DEM in region) - min(DEM in region)
-    dem_max = np.asarray(ndimage.maximum(dem, labeled, labels), dtype=np.float64)
-    dem_min = np.asarray(ndimage.minimum(dem, labeled, labels), dtype=np.float64)
+    dem_max = dem_stats["max_vals"]
+    dem_min = dem_stats["min_vals"]
     depths = dem_max - dem_min
 
-    # Volume: sum of (rim_elevation - DEM) per region
-    # rim_elevation = max DEM per label. We compute volume using:
-    # volume_i = sum_over_pixels_in_i( max_i - dem[pixel] ) * cell_area
-    # = (max_i * area_px_i - sum_dem_i) * cell_area
-    dem_sum = np.asarray(ndimage.sum(dem, labeled, labels), dtype=np.float64)
+    # Volume: (max_i * area_px_i - sum_dem_i) * cell_area
+    dem_sum = dem_stats["sum_vals"]
     volumes = (dem_max * areas_px - dem_sum) * cell_area
     volumes = np.maximum(volumes, 0.0)
 
-    # Wall slope: mean slope per region
-    wall_slopes = np.asarray(ndimage.mean(slope, labeled, labels), dtype=np.float64)
+    # Wall slope: mean slope per region (GPU-accelerated)
+    slope_stats = gpu_region_stats(slope, labeled, num_features)
+    wall_slopes = slope_stats["mean_vals"]
 
-    # Perimeter: count edge pixels per region using erosion
+    # Perimeter: count edge pixels per region using erosion (CPU — binary_erosion not in CuPy)
     eroded = ndimage.binary_erosion(labeled > 0)
     edge_mask = (labeled > 0) & ~eroded
-    # Count edge pixels per label
-    perimeters_px = ndimage.sum(edge_mask, labeled, labels).astype(np.float64)
+    labels_arr = np.arange(1, num_features + 1)
+    perimeters_px = ndimage.sum(edge_mask, labeled, labels_arr).astype(np.float64)
     perimeters_m = perimeters_px * resolution_m
 
     # Circularity: 4*pi*area / perimeter^2
@@ -169,8 +167,8 @@ def batch_morphometrics(
             if max(h, w) > 0:
                 elongations[i] = min(h, w) / max(h, w)
 
-    # Centroids
-    centroids = ndimage.center_of_mass(np.ones_like(dem), labeled, labels)
+    # Centroids (already computed by GPU-accelerated backend)
+    centroids = dem_stats["centroids"]
 
     return {
         "area_px": areas_px,

@@ -4,9 +4,9 @@ Vectorized: uses scipy.ndimage bulk operations across all labels at once.
 """
 
 import numpy as np
-from scipy import ndimage
 from shapely.geometry import Point
 
+from hole_finder.detection.array_backend import label, region_stats
 from hole_finder.detection.base import Candidate, DetectionPass, FeatureType, PassInput
 from hole_finder.detection.registry import register_pass
 
@@ -44,15 +44,14 @@ class TPIPass(DetectionPass):
         if not np.any(depression_mask):
             return []
 
-        labeled, num_features = ndimage.label(depression_mask)
+        labeled, num_features = label(depression_mask)
         if num_features == 0:
             return []
 
-        labels = np.arange(1, num_features + 1)
-
-        areas_px = ndimage.sum(depression_mask, labeled, labels).astype(np.float64)
-        min_tpis = ndimage.minimum(tpi, labeled, labels)
-        centroids = ndimage.center_of_mass(depression_mask, labeled, labels)
+        stats = region_stats(tpi, labeled, num_features, mask=depression_mask.astype(np.float32))
+        areas_px = stats["areas_px"]
+        min_tpis = stats["min_vals"]
+        centroids = stats["centroids"]
 
         valid = areas_px >= min_area_pixels
 

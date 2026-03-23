@@ -4,9 +4,9 @@ Vectorized: uses scipy.ndimage bulk operations across all labels at once.
 """
 
 import numpy as np
-from scipy import ndimage
 from shapely.geometry import Point
 
+from hole_finder.detection.array_backend import label, region_stats
 from hole_finder.detection.base import Candidate, DetectionPass, FeatureType, PassInput
 from hole_finder.detection.registry import register_pass
 
@@ -42,15 +42,14 @@ class CurvaturePass(DetectionPass):
         if not np.any(concave_mask):
             return []
 
-        labeled, num_features = ndimage.label(concave_mask)
+        labeled, num_features = label(concave_mask)
         if num_features == 0:
             return []
 
-        labels = np.arange(1, num_features + 1)
-
-        areas_px = ndimage.sum(concave_mask, labeled, labels).astype(np.float64)
-        min_curvs = ndimage.minimum(curv, labeled, labels)
-        centroids = ndimage.center_of_mass(concave_mask, labeled, labels)
+        stats = region_stats(curv, labeled, num_features, mask=concave_mask.astype(np.float32))
+        areas_px = stats["areas_px"]
+        min_curvs = stats["min_vals"]
+        centroids = stats["centroids"]
 
         valid = areas_px >= min_area_pixels
 

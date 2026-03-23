@@ -11,9 +11,9 @@ instead of per-region Python loops. O(H*W) instead of O(N*H*W).
 """
 
 import numpy as np
-from scipy import ndimage
 from shapely.geometry import Point
 
+from hole_finder.detection.array_backend import label, region_stats
 from hole_finder.detection.base import Candidate, DetectionPass, FeatureType, PassInput
 from hole_finder.detection.registry import register_pass
 
@@ -54,17 +54,16 @@ class FillDifferencePass(DetectionPass):
         if not np.any(depression_mask):
             return []
 
-        labeled, num_features = ndimage.label(depression_mask)
+        labeled, num_features = label(depression_mask)
         if num_features == 0:
             return []
 
-        labels = np.arange(1, num_features + 1)
-
-        # Vectorized bulk stats — single pass over the array per stat
-        areas_px = ndimage.sum(depression_mask, labeled, labels).astype(np.float64)
+        # Vectorized bulk stats — GPU if available, CPU otherwise
+        stats = region_stats(diff, labeled, num_features, mask=depression_mask.astype(np.float32))
+        areas_px = stats["areas_px"]
         areas_m2 = areas_px * cell_area
-        max_depths = ndimage.maximum(diff, labeled, labels)
-        centroids = ndimage.center_of_mass(depression_mask, labeled, labels)
+        max_depths = stats["max_vals"]
+        centroids = stats["centroids"]
 
         # Filter by area bounds (vectorized)
         valid = (areas_m2 >= min_area_m2) & (areas_m2 <= max_area_m2)
