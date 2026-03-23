@@ -16,20 +16,13 @@ import numpy as np
 from numpy.typing import NDArray
 
 from magic_eyes.detection.passes.random_forest import FEATURE_NAMES, extract_features
-from magic_eyes.processing.derivatives import (
-    compute_curvature,
-    compute_fill_difference,
-    compute_hillshade,
-    compute_slope,
-    compute_svf,
-    compute_tpi,
-)
 
 
 def extract_rf_training_data(
     dem: NDArray[np.float32],
     resolution: float,
     positive_masks: list[NDArray[np.bool_]],
+    derivatives: dict[str, NDArray[np.float32]],
     n_negatives: int = 0,
     rng: np.random.Generator | None = None,
 ) -> tuple[NDArray[np.float64], NDArray[np.int32]]:
@@ -39,6 +32,7 @@ def extract_rf_training_data(
         dem: DEM array
         resolution: cell size in meters
         positive_masks: list of boolean masks for known features
+        derivatives: pre-computed derivative arrays (slope, tpi, svf, fill_difference)
         n_negatives: number of random negative patches to generate
         rng: random number generator
 
@@ -48,9 +42,9 @@ def extract_rf_training_data(
     if rng is None:
         rng = np.random.default_rng(42)
 
-    slope = compute_slope(dem, resolution)
-    tpi = compute_tpi(dem, max(1, int(15 / resolution)))
-    svf = compute_svf(dem, resolution, radius_m=30.0, n_directions=8)
+    slope = derivatives["slope"]
+    tpi = derivatives["tpi"]
+    svf = derivatives["svf"]
 
     features_list = []
     labels_list = []
@@ -65,7 +59,7 @@ def extract_rf_training_data(
 
     # Negative samples from random locations
     h, w = dem.shape
-    fill_diff = compute_fill_difference(dem)
+    fill_diff = derivatives.get("fill_difference", np.zeros_like(dem))
 
     for _ in range(n_negatives):
         # Random patch that is NOT a depression
@@ -145,13 +139,16 @@ def train_random_forest(
 
 def extract_unet_patches(
     dem: NDArray[np.float32],
-    resolution: float,
+    derivatives: dict[str, NDArray[np.float32]],
     positive_centers: list[tuple[int, int]],
     patch_size: int = 256,
     n_negatives: int = 0,
     rng: np.random.Generator | None = None,
 ) -> tuple[NDArray[np.float32], NDArray[np.float32]]:
     """Extract U-Net training patches (5-channel input + binary mask).
+
+    Args:
+        derivatives: pre-computed derivative arrays (hillshade, slope, profile_curvature, tpi, svf, fill_difference)
 
     Returns:
         (input_patches, label_patches) each of shape (N, C, H, W) / (N, 1, H, W)
@@ -162,12 +159,11 @@ def extract_unet_patches(
     h, w = dem.shape
     half = patch_size // 2
 
-    # Compute derivatives for all channels
-    hs = compute_hillshade(dem, resolution)
-    sl = compute_slope(dem, resolution)
-    curv = compute_curvature(dem, resolution, "profile")
-    tpi = compute_tpi(dem, max(1, int(15 / resolution)))
-    svf = compute_svf(dem, resolution, radius_m=30.0, n_directions=8)
+    hs = derivatives.get("hillshade", np.zeros_like(dem))
+    sl = derivatives.get("slope", np.zeros_like(dem))
+    curv = derivatives.get("profile_curvature", np.zeros_like(dem))
+    tpi = derivatives.get("tpi", np.zeros_like(dem))
+    svf = derivatives.get("svf", np.zeros_like(dem))
 
     def normalize(arr):
         vmin, vmax = np.nanmin(arr), np.nanmax(arr)
@@ -177,8 +173,7 @@ def extract_unet_patches(
 
     channels = np.stack([normalize(hs), normalize(sl), normalize(curv), normalize(tpi), normalize(svf)])
 
-    # Create label mask from fill-difference
-    fill_diff = compute_fill_difference(dem)
+    fill_diff = derivatives.get("fill_difference", np.zeros_like(dem))
     label_full = (fill_diff > 0.5).astype(np.float32)
 
     inputs = []

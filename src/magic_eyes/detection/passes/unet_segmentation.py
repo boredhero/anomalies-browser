@@ -16,13 +16,6 @@ from scipy.ndimage import label as ndimage_label
 from magic_eyes.config import settings
 from magic_eyes.detection.base import Candidate, DetectionPass, FeatureType, PassInput
 from magic_eyes.detection.registry import register_pass
-from magic_eyes.processing.derivatives import (
-    compute_curvature,
-    compute_hillshade,
-    compute_slope,
-    compute_svf,
-    compute_tpi,
-)
 
 
 def _build_unet():
@@ -95,24 +88,13 @@ def _prepare_input_tensor(
     Channels: hillshade, slope, profile_curvature, tpi_15m, svf
     """
     hs = derivatives.get("hillshade")
-    if hs is None:
-        hs = compute_hillshade(dem, resolution)
-
     sl = derivatives.get("slope")
-    if sl is None:
-        sl = compute_slope(dem, resolution)
-
     curv = derivatives.get("profile_curvature")
-    if curv is None:
-        curv = compute_curvature(dem, resolution, "profile")
-
-    tpi = derivatives.get("tpi_15m")
-    if tpi is None:
-        tpi = compute_tpi(dem, max(1, int(15 / resolution)))
-
+    tpi = derivatives.get("tpi") or derivatives.get("tpi_15m")
     svf = derivatives.get("svf")
-    if svf is None:
-        svf = compute_svf(dem, resolution)
+
+    if any(d is None for d in [hs, sl, curv, tpi, svf]):
+        return np.zeros((5, dem.shape[0], dem.shape[1]), dtype=np.float32)
 
     # Normalize each channel to [0, 1]
     def normalize(arr: np.ndarray) -> np.ndarray:

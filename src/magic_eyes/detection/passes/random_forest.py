@@ -1,16 +1,10 @@
-"""Random Forest classifier pass — filters true sinkholes from false positives.
-
-Extracts 10 morphometric features per candidate depression from the DEM and
-derivatives, then classifies using a trained sklearn RandomForest. AUC 0.92
-per Zhu et al. (2020).
-
-Works on CPU — no GPU required.
-"""
+"""Random Forest classifier pass — consumes pre-computed derivatives only."""
 
 from pathlib import Path
 
 import numpy as np
 from scipy.ndimage import label as ndimage_label
+from shapely.geometry import Point
 
 from magic_eyes.config import settings
 from magic_eyes.detection.base import Candidate, DetectionPass, FeatureType, PassInput
@@ -22,12 +16,6 @@ from magic_eyes.detection.postprocess.morphometrics import (
     compute_perimeter,
 )
 from magic_eyes.detection.registry import register_pass
-from magic_eyes.processing.derivatives import (
-    compute_fill_difference,
-    compute_slope,
-    compute_svf,
-    compute_tpi,
-)
 
 
 def extract_features(
@@ -38,20 +26,7 @@ def extract_features(
     svf: np.ndarray,
     resolution: float,
 ) -> np.ndarray:
-    """Extract 10 morphometric features for a single depression region.
-
-    Features (matching Zhu et al. 2020):
-    0. depth_m
-    1. area_m2
-    2. perimeter_m
-    3. circularity
-    4. elongation
-    5. depth_area_ratio
-    6. mean_slope
-    7. max_slope
-    8. tpi_at_centroid
-    9. svf_at_centroid
-    """
+    """Extract 10 morphometric features for a single depression region."""
     depth = compute_depth(dem, mask)
     area = compute_area(mask, resolution)
     perimeter = compute_perimeter(mask, resolution)
@@ -83,7 +58,6 @@ FEATURE_NAMES = [
 
 @register_pass
 class RandomForestPass(DetectionPass):
-    """Classify candidate depressions using Random Forest on morphometric features."""
 
     @property
     def name(self) -> str:
@@ -91,22 +65,11 @@ class RandomForestPass(DetectionPass):
 
     @property
     def version(self) -> str:
-        return "0.1.0"
+        return "0.2.0"
 
     @property
     def required_derivatives(self) -> list[str]:
-        return ["slope", "tpi_15m", "svf"]
-
-    def _load_model(self, model_path: Path | None = None):
-        """Load a trained sklearn model from disk."""
-        import joblib
-
-        if model_path is None:
-            model_path = settings.models_dir / "rf_sinkhole_v1.joblib"
-
-        if not model_path.exists():
-            return None
-        return joblib.load(model_path)
+        return ["fill_difference", "slope", "tpi", "svf"]
 
     def run(self, input_data: PassInput) -> list[Candidate]:
         config = input_data.config
@@ -117,34 +80,26 @@ class RandomForestPass(DetectionPass):
         resolution = abs(input_data.transform[0])
         dem = input_data.dem
 
-        # Load trained model
-        model = self._load_model(Path(model_path) if model_path else None)
-        if model is None:
-            # No model trained yet — skip gracefully
+        import joblib
+        mp = Path(model_path) if model_path else settings.models_dir / "rf_sinkhole_v1.joblib"
+        if not mp.exists():
+            return []
+        model = joblib.load(mp)
+
+        fill_diff = input_data.derivatives.get("fill_difference")
+        slope = input_data.derivatives.get("slope")
+        tpi = input_data.derivatives.get("tpi")
+        svf = input_data.derivatives.get("svf")
+        if any(d is None for d in [fill_diff, slope, tpi, svf]):
             return []
 
-        # Compute needed derivatives
-        slope = input_data.derivatives.get("slope")
-        if slope is None:
-            slope = compute_slope(dem, resolution)
-
-        tpi = input_data.derivatives.get("tpi_15m")
-        if tpi is None:
-            tpi = compute_tpi(dem, radius_pixels=max(1, int(15 / resolution)))
-
-        svf = input_data.derivatives.get("svf")
-        if svf is None:
-            svf = compute_svf(dem, resolution, radius_m=30.0, n_directions=16)
-
-        # Find depressions via fill-difference
-        fill_diff = compute_fill_difference(dem)
+        fill_diff = np.where(np.isfinite(fill_diff) & (fill_diff < 1000), fill_diff, 0)
         depression_mask = fill_diff > min_depth_m
         if not np.any(depression_mask):
             return []
 
         labeled, num_features = ndimage_label(depression_mask)
 
-        # Extract features for each depression and classify
         candidates = []
         for i in range(1, num_features + 1):
             mask = labeled == i
@@ -152,12 +107,8 @@ class RandomForestPass(DetectionPass):
                 continue
 
             features = extract_features(dem, mask, slope, tpi, svf, resolution)
-            features_2d = features.reshape(1, -1)
-
-            # Predict probability
             try:
-                proba = model.predict_proba(features_2d)[0]
-                # Assume class 1 = true sinkhole/feature
+                proba = model.predict_proba(features.reshape(1, -1))[0]
                 prob_positive = float(proba[1]) if len(proba) > 1 else float(proba[0])
             except Exception:
                 continue
@@ -169,17 +120,13 @@ class RandomForestPass(DetectionPass):
             cy, cx = float(np.mean(rows)), float(np.mean(cols))
             geo_x, geo_y = input_data.transform * (cx, cy)
 
-            from shapely.geometry import Point
-
             candidates.append(
                 Candidate(
                     geometry=Point(geo_x, geo_y),
                     score=prob_positive,
                     feature_type=FeatureType.SINKHOLE,
-                    morphometrics={
-                        name: float(val) for name, val in zip(FEATURE_NAMES, features)
-                    },
-                    metadata={"classifier": "random_forest", "model_version": "v1"},
+                    morphometrics={name: float(val) for name, val in zip(FEATURE_NAMES, features)},
+                    metadata={"classifier": "random_forest"},
                 )
             )
 

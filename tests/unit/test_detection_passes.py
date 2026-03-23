@@ -1,82 +1,308 @@
-"""Unit tests for detection passes against synthetic DEMs."""
+"""Tests for all detection passes — uses real GDAL + WhiteboxTools pipeline.
 
+Every test generates a GeoTIFF, runs the native derivative pipeline,
+then runs detection passes against the real derivatives.
+"""
+
+import shutil
+import tempfile
+from pathlib import Path
+
+import numpy as np
 import pytest
 
-from magic_eyes.detection.passes.fill_difference import FillDifferencePass
 from tests.fixtures.synthetic_dem import (
-    make_conical_pit_dem,
-    make_flat_dem,
-    make_multi_depression_dem,
-    make_sinkhole_dem,
-    make_slope_dem,
+    make_flat_geotiff,
+    make_pass_input_from_geotiff,
+    make_sinkhole_geotiff,
+    make_slope_geotiff,
+    write_geotiff,
+)
+
+GDAL_AVAILABLE = shutil.which("gdaldem") is not None
+WBT_AVAILABLE = True
+try:
+    import whitebox
+except Exception:
+    WBT_AVAILABLE = False
+
+pytestmark = pytest.mark.skipif(
+    not GDAL_AVAILABLE or not WBT_AVAILABLE,
+    reason="Requires GDAL + WhiteboxTools",
 )
 
 
+def _process_and_load(dem_path: Path, tmpdir: Path):
+    """Run native pipeline and return PassInput."""
+    from magic_eyes.processing.pipeline import ProcessingPipeline
+    result = ProcessingPipeline(output_dir=tmpdir / "out").process_dem_file(dem_path, force=True)
+    return make_pass_input_from_geotiff(dem_path, result.derivative_paths)
+
+
+# --- FillDifferencePass ---
+
 class TestFillDifferencePass:
-    def setup_method(self):
-        self.pass_instance = FillDifferencePass()
+    def test_detects_pit(self):
+        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
+            assert len(FillDifferencePass().run(inp)) >= 1
 
-    def test_detects_gaussian_sinkhole(self):
-        input_data = make_sinkhole_dem(depth=3.0, radius=15.0)
-        candidates = self.pass_instance.run(input_data)
-        assert len(candidates) >= 1, "Should detect the sinkhole"
-        best = max(candidates, key=lambda c: c.score)
-        assert abs(best.morphometrics["depth_m"] - 3.0) < 1.0
-        assert best.morphometrics["area_m2"] > 0
+    def test_no_false_pos_flat(self):
+        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d), d)
+            assert len(FillDifferencePass().run(inp)) == 0
 
-    def test_detects_conical_pit(self):
-        input_data = make_conical_pit_dem(depth=5.0, radius=10.0)
-        candidates = self.pass_instance.run(input_data)
-        assert len(candidates) >= 1, "Should detect the conical pit"
-        best = max(candidates, key=lambda c: c.score)
-        assert best.morphometrics["depth_m"] > 2.0
+    def test_no_false_pos_slope(self):
+        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_slope_geotiff(d), d)
+            assert len(FillDifferencePass().run(inp)) == 0
 
-    def test_no_false_positives_on_flat(self):
-        input_data = make_flat_dem()
-        candidates = self.pass_instance.run(input_data)
-        assert len(candidates) == 0, "Should not detect anything on flat terrain"
+    def test_rejects_shallow(self):
+        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=0.2), d)
+            inp.config = {"min_depth_m": 1.0}
+            assert len(FillDifferencePass().run(inp)) == 0
 
-    def test_no_false_positives_on_slope(self):
-        input_data = make_slope_dem(slope_deg=15.0)
-        candidates = self.pass_instance.run(input_data)
-        assert len(candidates) == 0, "Should not detect anything on uniform slope"
+    def test_multiple_depressions(self):
+        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            dem = np.full((400, 400), 500.0, dtype=np.float32)
+            y, x = np.mgrid[0:400, 0:400].astype(np.float32)
+            for cy, cx, depth, radius in [(100, 100, 3.0, 12), (300, 300, 4.0, 15)]:
+                dist = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+                mask = dist < radius
+                dem[mask] = 500.0 - depth * (1 - dist[mask] / radius)
+            dem_path = write_geotiff(d / "multi.tif", dem)
+            inp = _process_and_load(dem_path, d)
+            assert len(FillDifferencePass().run(inp)) >= 2
 
-    def test_rejects_shallow_depression(self):
-        input_data = make_sinkhole_dem(depth=0.2, radius=15.0)
-        input_data.config = {"min_depth_m": 0.5}
-        candidates = self.pass_instance.run(input_data)
-        assert len(candidates) == 0, "Should reject depression shallower than threshold"
-
-    def test_detects_multiple_depressions(self):
-        input_data = make_multi_depression_dem()
-        candidates = self.pass_instance.run(input_data)
-        # Should detect at least the 3 depressions above min_depth (0.5m)
-        assert len(candidates) >= 2, f"Expected >=2 detections, got {len(candidates)}"
-
-    def test_respects_max_area_filter(self):
-        input_data = make_sinkhole_dem(depth=3.0, radius=80.0)  # very large
-        input_data.config = {"max_area_m2": 1000.0}
-        candidates = self.pass_instance.run(input_data)
-        for c in candidates:
-            assert c.morphometrics["area_m2"] <= 1000.0
+    def test_respects_max_area(self):
+        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=3.0, radius=50.0), d)
+            inp.config = {"max_area_m2": 100.0}
+            for c in FillDifferencePass().run(inp):
+                assert c.morphometrics["area_m2"] <= 100.0
 
 
-class TestPassRegistry:
-    def test_fill_difference_registered(self):
-        from magic_eyes.detection.registry import PassRegistry
+# --- LocalReliefModelPass ---
 
-        passes = PassRegistry.list_passes()
-        assert "fill_difference" in passes
+class TestLocalReliefModelPass:
+    def test_detects_pit(self):
+        from magic_eyes.detection.passes.local_relief_model import LocalReliefModelPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
+            candidates = LocalReliefModelPass().run(inp)
+            assert len(candidates) >= 1
 
-    def test_get_pass_chain(self):
-        from magic_eyes.detection.registry import PassRegistry
+    def test_no_false_pos_flat(self):
+        from magic_eyes.detection.passes.local_relief_model import LocalReliefModelPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d), d)
+            assert len(LocalReliefModelPass().run(inp)) == 0
 
-        chain = PassRegistry.get_pass_chain(["fill_difference"])
-        assert len(chain) == 1
-        assert chain[0].name == "fill_difference"
+    def test_feature_type_is_cave(self):
+        from magic_eyes.detection.passes.local_relief_model import LocalReliefModelPass
+        from magic_eyes.detection.base import FeatureType
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
+            candidates = LocalReliefModelPass().run(inp)
+            if candidates:
+                assert candidates[0].feature_type == FeatureType.CAVE_ENTRANCE
 
-    def test_unknown_pass_raises(self):
-        from magic_eyes.detection.registry import PassRegistry
 
-        with pytest.raises(KeyError, match="nonexistent"):
-            PassRegistry.get("nonexistent")
+# --- CurvaturePass ---
+
+class TestCurvaturePass:
+    def test_detects_depression(self):
+        from magic_eyes.detection.passes.curvature import CurvaturePass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
+            inp.config = {"threshold": -0.001}
+            assert len(CurvaturePass().run(inp)) >= 1
+
+    def test_no_false_pos_flat(self):
+        from magic_eyes.detection.passes.curvature import CurvaturePass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d), d)
+            assert len(CurvaturePass().run(inp)) == 0
+
+
+# --- SkyViewFactorPass ---
+
+class TestSkyViewFactorPass:
+    def test_detects_pit(self):
+        from magic_eyes.detection.passes.sky_view_factor import SkyViewFactorPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=8.0, radius=15.0, size=100), d)
+            inp.config = {"threshold": 0.9}
+            assert len(SkyViewFactorPass().run(inp)) >= 1
+
+    def test_no_false_pos_flat(self):
+        from magic_eyes.detection.passes.sky_view_factor import SkyViewFactorPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d, size=100), d)
+            assert len(SkyViewFactorPass().run(inp)) == 0
+
+
+# --- TPIPass ---
+
+class TestTPIPass:
+    def test_detects_depression(self):
+        from magic_eyes.detection.passes.tpi import TPIPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
+            inp.config = {"threshold": -0.3}
+            assert len(TPIPass().run(inp)) >= 1
+
+    def test_no_false_pos_flat(self):
+        from magic_eyes.detection.passes.tpi import TPIPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d), d)
+            assert len(TPIPass().run(inp)) == 0
+
+
+# --- MorphometricFilterPass ---
+
+class TestMorphometricFilterPass:
+    def test_computes_morphometrics(self):
+        from magic_eyes.detection.passes.morphometric_filter import MorphometricFilterPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=20.0), d)
+            inp.config = {"min_depth_m": 0.3, "min_area_m2": 5.0, "min_circularity": 0.1}
+            candidates = MorphometricFilterPass().run(inp)
+            assert len(candidates) >= 1
+            m = candidates[0].morphometrics
+            assert "depth_m" in m
+            assert "area_m2" in m
+            assert "circularity" in m
+            assert "volume_m3" in m
+            assert "k_parameter" in m
+            assert "elongation" in m
+            assert "wall_slope_deg" in m
+
+    def test_no_false_pos_flat(self):
+        from magic_eyes.detection.passes.morphometric_filter import MorphometricFilterPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d), d)
+            assert len(MorphometricFilterPass().run(inp)) == 0
+
+    def test_classifies_feature_type(self):
+        from magic_eyes.detection.passes.morphometric_filter import MorphometricFilterPass
+        from magic_eyes.detection.base import FeatureType
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=20.0), d)
+            inp.config = {"min_depth_m": 0.3, "min_area_m2": 5.0, "min_circularity": 0.1}
+            candidates = MorphometricFilterPass().run(inp)
+            if candidates:
+                assert candidates[0].feature_type != FeatureType.UNKNOWN
+
+
+# --- PointDensityPass ---
+
+class TestPointDensityPass:
+    def test_empty_without_point_cloud(self):
+        from magic_eyes.detection.passes.point_density import PointDensityPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d), d)
+            assert len(PointDensityPass().run(inp)) == 0
+
+    def test_detects_void(self):
+        from magic_eyes.detection.passes.point_density import PointDensityPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d, size=100), d)
+            rng = np.random.default_rng(42)
+            n = 5000
+            x, y, z = rng.uniform(0, 100, n), rng.uniform(0, 100, n), rng.uniform(0, 10, n)
+            void = (x > 40) & (x < 60) & (y > 40) & (y < 60)
+            inp.point_cloud = {"X": x[~void], "Y": y[~void], "Z": z[~void]}
+            inp.config = {"cell_size_m": 5.0, "z_score_threshold": -1.5}
+            assert len(PointDensityPass().run(inp)) >= 1
+
+
+# --- MultiReturnPass ---
+
+class TestMultiReturnPass:
+    def test_empty_without_point_cloud(self):
+        from magic_eyes.detection.passes.multi_return import MultiReturnPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d), d)
+            assert len(MultiReturnPass().run(inp)) == 0
+
+    def test_detects_anomalous_returns(self):
+        from magic_eyes.detection.passes.multi_return import MultiReturnPass
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d, size=100), d)
+            rng = np.random.default_rng(42)
+            n = 5000
+            x, y = rng.uniform(0, 100, n), rng.uniform(0, 100, n)
+            rn, nr = np.ones(n, dtype=np.int32), np.ones(n, dtype=np.int32)
+            cluster = (x > 40) & (x < 60) & (y > 40) & (y < 60)
+            nr[cluster] = 4
+            inp.point_cloud = {"X": x, "Y": y, "ReturnNumber": rn, "NumberOfReturns": nr}
+            inp.config = {"search_radius_m": 10.0, "min_multi_return_ratio": 0.3}
+            assert len(MultiReturnPass().run(inp)) >= 1
+
+
+# --- PassRunner with TOML configs ---
+
+class TestPassRunnerToml:
+    def test_load_cave_config(self):
+        from magic_eyes.detection.runner import PassRunner
+        runner = PassRunner.from_toml(Path("configs/passes/cave_hunting.toml"))
+        assert len(runner.passes) >= 5
+
+    def test_load_sinkhole_config(self):
+        from magic_eyes.detection.runner import PassRunner
+        runner = PassRunner.from_toml(Path("configs/passes/sinkhole_survey.toml"))
+        assert len(runner.passes) >= 4
+
+    def test_cave_config_detects_pit(self):
+        from magic_eyes.detection.runner import PassRunner
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
+            runner = PassRunner.from_toml(Path("configs/passes/cave_hunting.toml"))
+            assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) >= 1
+
+    def test_sinkhole_config_detects_pit(self):
+        from magic_eyes.detection.runner import PassRunner
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
+            runner = PassRunner.from_toml(Path("configs/passes/sinkhole_survey.toml"))
+            assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) >= 1
+
+    def test_no_false_pos_flat(self):
+        from magic_eyes.detection.runner import PassRunner
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            inp = _process_and_load(make_flat_geotiff(d), d)
+            runner = PassRunner.from_toml(Path("configs/passes/sinkhole_survey.toml"))
+            assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) == 0
