@@ -28,8 +28,8 @@ export default function TopBar() {
             <button
               key={b.value}
               onClick={() => setBasemap(b.value)}
-              className={`px-3 py-1.5 text-sm rounded-sm transition-colors ${
-                basemap === b.value ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+              className={`px-4 py-2 text-sm rounded-sm transition-colors ${
+                basemap === b.value ? 'bg-burgundy-500 text-white' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               {b.label}

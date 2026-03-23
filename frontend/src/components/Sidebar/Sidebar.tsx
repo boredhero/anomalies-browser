@@ -60,10 +60,10 @@ export default function Sidebar() {
             return (
               <button key={tab.id} onClick={() => setActivePanel(tab.id)}
                 className={`flex-1 flex flex-col items-center gap-1 py-3 text-sm transition-colors relative
-                  ${isActive ? 'text-blue-400 border-b-2 border-blue-400' : 'text-slate-500 hover:text-slate-300'}`}>
+                  ${isActive ? 'text-bordeaux-400 border-b-2 border-bordeaux-400' : 'text-slate-500 hover:text-slate-300'}`}>
                 <tab.icon size={18} />
                 <span>{tab.label}</span>
-                {hasNotification && <span className="absolute top-2 right-1/4 w-2 h-2 bg-blue-400 rounded-full" />}
+                {hasNotification && <span className="absolute top-2 right-1/4 w-2 h-2 bg-hotpink-400 rounded-full" />}
               </button>
             );
           })}

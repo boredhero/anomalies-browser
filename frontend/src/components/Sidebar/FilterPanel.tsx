@@ -39,7 +39,7 @@ export default function FilterPanel() {
         <div className="flex gap-1.5">
           {BASEMAPS.map(b => (
             <button key={b.value} onClick={() => setBasemap(b.value)}
-              className={`flex-1 text-sm py-2 rounded transition-colors font-medium ${basemap === b.value ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
+              className={`flex-1 text-sm py-3 px-3 rounded transition-colors font-medium ${basemap === b.value ? 'bg-burgundy-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
               {b.label}
             </button>
           ))}
@@ -70,7 +70,7 @@ export default function FilterPanel() {
         <input type="range" min={0} max={1} step={0.05}
           value={filters.confidenceRange[0]}
           onChange={(e) => setFilters({ confidenceRange: [parseFloat(e.target.value), filters.confidenceRange[1]] })}
-          className="w-full accent-blue-500 h-2" />
+          className="w-full accent-cherry-500 h-2" />
       </section>
 
       {/* Layer Toggles */}
@@ -95,7 +95,7 @@ export default function FilterPanel() {
             <span className="text-sm text-slate-400">Exaggeration: {terrainExaggeration.toFixed(1)}x</span>
             <input type="range" min={0.5} max={5} step={0.5} value={terrainExaggeration}
               onChange={(e) => setTerrainExaggeration(parseFloat(e.target.value))}
-              className="w-full accent-blue-500 h-2" />
+              className="w-full accent-cherry-500 h-2" />
           </div>
         )}
       </section>

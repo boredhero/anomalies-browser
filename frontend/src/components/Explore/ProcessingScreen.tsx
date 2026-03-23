@@ -63,7 +63,7 @@ export default function ProcessingScreen({ progress, stage, error, onRetry }: Pr
           <p className="text-slate-400 mb-6">{error}</p>
           <button
             onClick={onRetry}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-3 rounded transition-colors"
+            className="bg-cherry-500 hover:bg-cherry-400 text-white font-medium px-6 py-3 rounded transition-colors"
           >
             Try again
           </button>
@@ -79,7 +79,7 @@ export default function ProcessingScreen({ progress, stage, error, onRetry }: Pr
     <div className="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center">
       <div className="text-center px-8 max-w-lg w-full">
         {/* Spinning icon */}
-        <Loader2 size={40} className="animate-spin text-blue-400 mx-auto mb-6" />
+        <Loader2 size={40} className="animate-spin text-hotpink-400 mx-auto mb-6" />
 
         {/* Stage label */}
         <h2 className="text-xl font-bold text-white mb-6">{currentLabel}</h2>
@@ -96,7 +96,7 @@ export default function ProcessingScreen({ progress, stage, error, onRetry }: Pr
                     isComplete
                       ? 'bg-green-600 text-white'
                       : isCurrent
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-cherry-500 text-white'
                         : 'bg-slate-800 text-slate-500'
                   }`}
                 >
@@ -113,7 +113,7 @@ export default function ProcessingScreen({ progress, stage, error, onRetry }: Pr
         {/* Progress bar */}
         <div className="w-full h-2 bg-slate-800 rounded overflow-hidden mb-3">
           <div
-            className="h-full bg-blue-500 rounded transition-all duration-700 ease-out"
+            className="h-full bg-hotpink-500 rounded transition-all duration-700 ease-out"
             style={{ width: `${Math.max(progress, 2)}%` }}
           />
         </div>
