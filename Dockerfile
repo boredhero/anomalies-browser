@@ -17,6 +17,10 @@ COPY pyproject.toml uv.lock ./
 COPY README.md ./
 RUN uv sync --frozen --no-dev --no-editable
 
+# Force WhiteboxTools binary download (the whitebox Python package downloads
+# the WBT Rust binary on first import — do it at build time, not runtime)
+RUN uv run python -c "import whitebox; wbt = whitebox.WhiteboxTools(); print('WBT version:', wbt.version().split(chr(10))[0])"
+
 # Copy source
 COPY src/ src/
 COPY configs/ configs/
