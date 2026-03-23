@@ -30,8 +30,27 @@ const SATELLITE_STYLE = {
   }],
 };
 
+const LIDAR_STYLE = {
+  version: 8 as const,
+  sources: {
+    'lidar-hillshade': {
+      type: 'raster' as const,
+      tiles: ['/api/raster/hillshade/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      minzoom: 10,
+      maxzoom: 16,
+    },
+  },
+  layers: [{
+    id: 'lidar-hillshade',
+    type: 'raster' as const,
+    source: 'lidar-hillshade',
+  }],
+};
+
 const BASEMAP_STYLES: Record<Basemap, string | object> = {
   satellite: SATELLITE_STYLE,
+  lidar: LIDAR_STYLE,
   topo: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 };

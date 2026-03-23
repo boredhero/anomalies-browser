@@ -39,7 +39,7 @@ async def get_raster_tile(
     returns 404 (tiles must be pre-generated during processing).
     """
     # Check tile cache
-    cache_dir = settings.processed_dir / "tile_cache" / layer / str(z) / str(x)
+    cache_dir = settings.data_dir / "tile_cache" / layer / str(z) / str(x)
     tile_path = cache_dir / f"{y}.png"
 
     if tile_path.exists():
