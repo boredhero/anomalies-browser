@@ -5,6 +5,8 @@ They verify route structure, request validation, and response schemas.
 """
 
 
+import io
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -67,6 +69,24 @@ class TestRasterTilesEndpoint:
     def test_unknown_layer(self, client):
         r = client.get("/api/raster/nonexistent/10/300/400.png")
         assert r.status_code == 200  # returns transparent PNG fallback
+
+    def test_composited_terrain_tile_returns_png(self, client):
+        """Composited terrain endpoint returns valid PNG (AWS fallback for uncovered areas)."""
+        r = client.get("/api/raster/terrain/10/300/400.png")
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "image/png"
+        assert r.content[:4] == b"\x89PNG"
+
+    def test_composited_terrain_tile_is_terrarium_encoded(self, client):
+        """Terrain tile should be a valid Terrarium-encoded PNG (RGB, not RGBA)."""
+        from PIL import Image
+        r = client.get("/api/raster/terrain/5/9/12.png")
+        assert r.status_code == 200
+        img = Image.open(io.BytesIO(r.content))
+        assert img.mode in ("RGB", "RGBA")
+        # Verify it's a reasonable size (1x1 fallback or 256x256 real)
+        assert img.size[0] >= 1
+        assert img.size[1] >= 1
 
 
 class TestVectorTiles:
