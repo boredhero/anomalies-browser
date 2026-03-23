@@ -70,3 +70,14 @@ async def system_info() -> dict[str, Any]:
         info["scipy_version"] = None
 
     return info
+
+
+@router.get("/storage")
+async def storage_stats() -> dict[str, Any]:
+    """Storage usage breakdown — always available (no secrets exposed)."""
+    from hole_finder.config import settings
+    from hole_finder.utils.storage import get_storage_stats
+
+    if not settings.data_dir.exists():
+        return {"error": "data_dir not found"}
+    return get_storage_stats(settings.data_dir)
