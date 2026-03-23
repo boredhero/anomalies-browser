@@ -16,7 +16,7 @@ export function useDetections() {
         west: bbox[0], south: bbox[1], east: bbox[2], north: bbox[3],
         min_confidence: filters.confidenceRange[0],
         feature_type: filters.featureTypes,
-        limit: 10000,
+        limit: 500,
       });
       return (data.features || []).map((f: any) => ({
         id: f.id,

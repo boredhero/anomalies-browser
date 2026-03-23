@@ -26,7 +26,7 @@ export default function Sidebar() {
       {/* Mobile toggle button */}
       {!sidebarOpen && (
         <button onClick={() => setSidebarOpen(true)}
-          className="fixed top-4 left-4 z-50 bg-slate-800/90 backdrop-blur p-3 rounded-xl shadow-lg md:hidden">
+          className="fixed top-4 left-4 z-50 bg-slate-800/90 backdrop-blur p-3 rounded shadow-lg md:hidden">
           <Menu size={22} className="text-white" />
         </button>
       )}
@@ -37,14 +37,14 @@ export default function Sidebar() {
         transition-transform duration-300 ease-in-out
         flex flex-col
         /* Mobile: bottom sheet */
-        inset-x-0 bottom-0 h-[60vh] rounded-t-2xl border-t border-r-0
+        inset-x-0 bottom-0 h-[60vh] rounded-t border-t border-r-0
         md:inset-y-0 md:left-0 md:w-[var(--sidebar-width)] md:h-full md:rounded-none md:border-r md:border-t-0
         ${sidebarOpen ? 'translate-y-0 md:translate-x-0' : 'translate-y-full md:-translate-x-full'}
       `}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700 flex-shrink-0">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-700 flex-shrink-0">
           <div>
-            <h2 className="text-base font-bold text-white tracking-wide">HOLE FINDER</h2>
+            <h2 className="text-lg font-bold text-white tracking-wide">HOLE FINDER</h2>
             <VersionTag />
           </div>
           <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-white md:hidden">
@@ -94,7 +94,7 @@ function DetectionList() {
       <div className="flex flex-col gap-1.5 max-h-[50vh] overflow-y-auto">
         {detections.slice(0, 100).map((d: any) => (
           <button key={d.id} onClick={() => setSelectedDetection(d)}
-            className="flex items-center gap-3 p-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-left transition-colors">
+            className="flex items-center gap-3 p-3 rounded bg-slate-800 hover:bg-slate-700 text-left transition-colors">
             <span className="w-3 h-3 rounded-full flex-shrink-0"
               style={{ backgroundColor: FEATURE_COLORS[d.feature_type as keyof typeof FEATURE_COLORS] || '#6b7280' }} />
             <span className="text-sm text-slate-200 truncate flex-1">

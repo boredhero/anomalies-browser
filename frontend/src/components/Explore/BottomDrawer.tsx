@@ -54,7 +54,7 @@ export default function BottomDrawer() {
   // Detail view — single card expanded (from map dot click or card click)
   if (drawerState === 'detail' && selectedDetection) {
     return (
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t-2xl max-h-[60vh] overflow-y-auto">
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t max-h-[60vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <button
             onClick={() => setDrawerState('collapsed')}
@@ -76,13 +76,13 @@ export default function BottomDrawer() {
   // No search yet — prompt user
   if (!searchBbox) {
     return (
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t-2xl p-5">
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t p-5">
         <div className="text-center">
           <p className="text-base text-slate-400 mb-3">Tap "Search this area" to find detections here</p>
           <button
             onClick={() => bbox && setSearchBbox(bbox)}
             disabled={!bbox}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium px-5 py-2.5 rounded-full transition-colors"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium px-5 py-2.5 rounded transition-colors"
           >
             <Search size={16} /> Search this area
           </button>
@@ -94,7 +94,7 @@ export default function BottomDrawer() {
   // Loading
   if (isLoading || isFetching) {
     return (
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t-2xl p-5 text-center">
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t p-5 text-center">
         <Loader2 size={24} className="animate-spin text-blue-400 mx-auto mb-2" />
         <p className="text-sm text-slate-400">Searching for detections...</p>
       </div>
@@ -104,7 +104,7 @@ export default function BottomDrawer() {
   // No results
   if (detections.length === 0) {
     return (
-      <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t-2xl p-5 text-center text-base text-slate-400">
+      <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t p-5 text-center text-base text-slate-400">
         No detections found here. Try panning to a different area and searching again.
       </div>
     );
@@ -114,13 +114,13 @@ export default function BottomDrawer() {
   if (drawerState === 'expanded') {
     return (
       <div
-        className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t-2xl transition-all duration-300"
+        className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t transition-all duration-300"
         style={{ height: '60vh' }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         <div className="flex justify-center pt-2 pb-1">
-          <div className="w-10 h-1 bg-slate-600 rounded-full" />
+          <div className="w-10 h-1 bg-slate-600 rounded" />
         </div>
         <div className="flex items-center justify-between px-5 pb-3">
           <span className="text-base font-semibold text-slate-300">{detections.length} detections</span>
@@ -146,12 +146,12 @@ export default function BottomDrawer() {
   // Collapsed view — horizontal card strip
   return (
     <div
-      className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t-2xl transition-all duration-300"
+      className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t transition-all duration-300"
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
       <div className="flex justify-center pt-2 pb-1">
-        <div className="w-10 h-1 bg-slate-600 rounded-full" />
+        <div className="w-10 h-1 bg-slate-600 rounded" />
       </div>
       <div className="flex items-center justify-between px-5 pb-2">
         <span className="text-sm font-semibold text-slate-400">{detections.length} detections</span>

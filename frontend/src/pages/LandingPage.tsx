@@ -36,9 +36,15 @@ export default function LandingPage() {
         setGeoLoading(false);
         setPhase('explore');
       },
-      () => {
+      (err) => {
         setGeoLoading(false);
-        setGeoError("Couldn't get your location. Try again or pick a region.");
+        const messages: Record<number, string> = {
+          1: "Location permission denied. Allow location access in your browser settings and try again.",
+          2: "Location unavailable. On Linux/Firefox, install and start the geoclue package. On other browsers, check that location services are enabled.",
+          3: "Location request timed out. Try again or pick a region.",
+        };
+        setGeoError(messages[err.code] ?? `Geolocation error (code ${err.code}): ${err.message}`);
+        console.error('[Hole Finder] Geolocation failed:', { code: err.code, message: err.message, PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3 });
       },
       { timeout: 10000 },
     );
@@ -93,7 +99,7 @@ export default function LandingPage() {
 
         {/* Geo error */}
         {geoError && (
-          <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 text-red-300 text-sm rounded-xl px-4 py-3 mb-4">
+          <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/50 text-red-300 text-sm rounded px-4 py-3 mb-4">
             <AlertCircle size={16} className="flex-shrink-0" />
             {geoError}
           </div>
@@ -104,14 +110,14 @@ export default function LandingPage() {
           <button
             onClick={handleFindNearMe}
             disabled={geoLoading}
-            className="flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold py-4 px-8 rounded-2xl text-lg transition-colors"
+            className="flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold py-4 px-8 rounded text-lg transition-colors"
           >
             {geoLoading ? <Loader2 size={22} className="animate-spin" /> : <Locate size={22} />}
             {geoLoading ? 'Getting location...' : 'Find a Hole Near Me'}
           </button>
           <button
             onClick={() => setPhase('regionPicker')}
-            className="flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-4 px-8 rounded-2xl text-lg transition-colors"
+            className="flex items-center justify-center gap-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-4 px-8 rounded text-lg transition-colors"
           >
             <MapIcon size={22} />
             Pick a Region
@@ -150,7 +156,7 @@ function RegionPicker({ onPick, onBack }: { onPick: (geometry: any) => void; onB
               <button
                 key={region.name}
                 onClick={() => onPick(region.geometry)}
-                className="text-left bg-slate-800/80 hover:bg-slate-700 border border-slate-700/50 hover:border-slate-600 rounded-2xl p-5 transition-all"
+                className="text-left bg-slate-800/80 hover:bg-slate-700 border border-slate-700/50 hover:border-slate-600 rounded p-5 transition-all"
               >
                 <h3 className="text-base font-semibold text-white mb-1.5">
                   {formatRegionName(region.name)}

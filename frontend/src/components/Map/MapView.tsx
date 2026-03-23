@@ -72,7 +72,13 @@ const BASEMAP_STYLES: Record<Basemap, string | object> = {
 
 function DeckGLOverlay(props: { layers: any[] }) {
   const overlay = useControl(() => new MapboxOverlay({ interleaved: false }));
-  overlay.setProps({ layers: props.layers });
+  useEffect(() => {
+    try {
+      overlay.setProps({ layers: props.layers });
+    } catch {
+      // Ignore during style transitions when GL context is temporarily invalid
+    }
+  }, [overlay, props.layers]);
   return null;
 }
 
@@ -110,7 +116,7 @@ function MVTLayerManager() {
     if (!map.getSource('detections-mvt')) {
       map.addSource('detections-mvt', {
         type: 'vector',
-        tiles: [`${window.location.origin}/api/tiles/{z}/{x}/{y}.mvt?min_confidence=0.4`],
+        tiles: [`${window.location.origin}/api/tiles/{z}/{x}/{y}.mvt?min_confidence=0.3`],
         minzoom: 6,
         maxzoom: 16,
       });
@@ -121,8 +127,24 @@ function MVTLayerManager() {
         type: 'circle',
         source: 'detections-mvt',
         'source-layer': 'detections',
+        // Zoom-dependent confidence filter: at low zoom only show high-confidence,
+        // progressively reveal lower-confidence detections as user zooms in
+        filter: ['>=', ['get', 'confidence'],
+          ['step', ['zoom'],
+            0.7,      // zoom < 12: only high confidence
+            12, 0.6,  // zoom 12–14: medium-high
+            14, 0.5,  // zoom 14–16: medium
+            16, 0.3,  // zoom 16+: show all
+          ],
+        ],
         paint: {
-          'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 4, 12, 8, 16, 14, 18, 20],
+          // Radius scales with both zoom AND confidence
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            8, ['interpolate', ['linear'], ['get', 'confidence'], 0.3, 2, 0.7, 4, 1.0, 6],
+            12, ['interpolate', ['linear'], ['get', 'confidence'], 0.3, 4, 0.7, 8, 1.0, 12],
+            16, ['interpolate', ['linear'], ['get', 'confidence'], 0.3, 8, 0.7, 14, 1.0, 20],
+          ],
           'circle-color': ['match', ['get', 'feature_type'],
             'cave_entrance', FEATURE_COLORS.cave_entrance,
             'mine_portal', FEATURE_COLORS.mine_portal,
@@ -136,7 +158,14 @@ function MVTLayerManager() {
           ],
           'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 14, 2, 18, 3],
           'circle-stroke-color': 'rgba(255,255,255,0.7)',
-          'circle-opacity': 0.85,
+          // Opacity scales with confidence — low confidence = faint, high = bold
+          'circle-opacity': [
+            'interpolate', ['linear'], ['get', 'confidence'],
+            0.3, 0.35,
+            0.5, 0.55,
+            0.7, 0.75,
+            0.9, 0.95,
+          ],
         },
       });
     }
