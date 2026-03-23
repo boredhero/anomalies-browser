@@ -48,7 +48,7 @@ export const useStore = create<AppState>((set) => ({
   toggleHeatmap: () => set((s) => ({ showHeatmap: !s.showHeatmap })),
   showGroundTruth: true,
   toggleGroundTruth: () => set((s) => ({ showGroundTruth: !s.showGroundTruth })),
-  show3DTerrain: false,
+  show3DTerrain: true,
   toggle3DTerrain: () => set((s) => ({ show3DTerrain: !s.show3DTerrain })),
   terrainExaggeration: 1.5,
   setTerrainExaggeration: (v) => set({ terrainExaggeration: v }),

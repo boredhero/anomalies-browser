@@ -147,9 +147,11 @@ export default function MapView() {
   return (
     <Map
       initialViewState={{
-        longitude: -79.0,
-        latitude: 40.5,
-        zoom: 7,
+        longitude: -79.71,
+        latitude: 39.80,
+        zoom: 13,
+        pitch: 45,
+        bearing: -15,
       }}
       style={{ width: '100%', height: '100%' }}
       mapStyle={BASEMAP_STYLES[basemap] as any}
