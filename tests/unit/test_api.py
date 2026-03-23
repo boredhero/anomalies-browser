@@ -135,6 +135,7 @@ class TestRouteStructure:
             "/api/geocode",
             "/api/detections/count",
             "/api/explore/scan",
+            "/api/raster/terrain/{z}/{x}/{y}.png",
         ]
 
         for path in expected:
