@@ -27,12 +27,17 @@ def write_geotiff(path: Path, dem: np.ndarray, resolution: float = 1.0) -> Path:
 
 
 def make_sinkhole_geotiff(tmpdir: Path, depth: float = 5.0, radius: float = 12.0, size: int = 200) -> Path:
-    """Create a GeoTIFF with a conical pit."""
-    dem = np.full((size, size), 500.0, dtype=np.float32)
-    y, x = np.mgrid[0:size, 0:size].astype(np.float32)
-    dist = np.sqrt((x - size / 2) ** 2 + (y - size / 2) ** 2)
+    """Create a GeoTIFF with a conical pit on a slight slope.
+
+    The slight slope (0.01m/pixel) ensures WBT fill_depressions can determine
+    pour direction. Perfectly flat surroundings cause fill algorithms to fail.
+    """
+    y = np.arange(size, dtype=np.float32) * 0.01
+    dem = np.tile(y[:, np.newaxis], (1, size)) + 500.0
+    ym, xm = np.mgrid[0:size, 0:size].astype(np.float32)
+    dist = np.sqrt((xm - size / 2) ** 2 + (ym - size / 2) ** 2)
     pit_mask = dist < radius
-    dem[pit_mask] = 500.0 - depth * (1 - dist[pit_mask] / radius)
+    dem[pit_mask] -= depth * (1 - dist[pit_mask] / radius)
     return write_geotiff(tmpdir / "sinkhole_dem.tif", dem)
 
 
