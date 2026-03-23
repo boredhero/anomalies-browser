@@ -1,16 +1,16 @@
 services:
   db:
     image: postgis/postgis:16-3.4
-    container_name: magic-eyes-db
+    container_name: hole-finder-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: magic_eyes
-      POSTGRES_USER: magic_eyes
+      POSTGRES_DB: hole_finder
+      POSTGRES_USER: hole_finder
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     ports:
       - "192.168.1.111:5432:5432"
     volumes:
-      - magic_eyes_pgdata:/var/lib/postgresql/data
+      - hole_finder_pgdata:/var/lib/postgresql/data
       - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init.sql:ro
     command:
       - postgres
@@ -23,24 +23,24 @@ services:
       - -c
       - max_connections=100
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U magic_eyes"]
+      test: ["CMD-SHELL", "pg_isready -U hole_finder"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: magic-eyes-redis
+    container_name: hole-finder-redis
     restart: unless-stopped
     ports:
       - "192.168.1.111:6379:6379"
     volumes:
-      - magic_eyes_redis:/data
+      - hole_finder_redis:/data
     command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
 
   flower:
     image: mher/flower:2.0
-    container_name: magic-eyes-flower
+    container_name: hole-finder-flower
     restart: unless-stopped
     ports:
       - "192.168.1.111:5555:5555"
@@ -52,5 +52,5 @@ services:
       - monitoring
 
 volumes:
-  magic_eyes_pgdata:
-  magic_eyes_redis:
+  hole_finder_pgdata:
+  hole_finder_redis:

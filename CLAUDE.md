@@ -5,7 +5,7 @@ LiDAR terrain anomaly detection platform. Downloads free public LiDAR data, proc
 
 **Live:** holefinder.martinospizza.dev and anomalies.martinospizza.dev
 **Repo:** github.com/boredhero/anomalies-browser (GPL-3.0)
-**Project dir:** ~/Desktop/magic-eyes
+**Project dir:** ~/Desktop/hole-finder
 
 ## Architecture At a Glance
 
@@ -38,12 +38,12 @@ COPC/LAZ tile
 - 2TB NVMe (OS), 1TB Samsung SSD at /data (LiDAR storage, ext4, fstab)
 - PDAL 2.9.3, GDAL 3.12.2, WhiteboxTools installed
 - Docker 29.3.0 running 6 containers:
-  - magic-eyes-api (port 9747→8000, FastAPI + built frontend)
-  - magic-eyes-db (PostGIS 16, 127.0.0.1:5432)
-  - magic-eyes-redis (Redis 7, 127.0.0.1:6379)
-  - magic-eyes-worker (Celery: ingest/process/detect queues, 4 concurrency)
-  - magic-eyes-gpu-worker (Celery: gpu queue, /dev/kfd+/dev/dri, HSA_OVERRIDE_GFX_VERSION=10.3.0)
-  - magic-eyes-autoheal
+  - hole-finder-api (port 9747→8000, FastAPI + built frontend)
+  - hole-finder-db (PostGIS 16, 127.0.0.1:5432)
+  - hole-finder-redis (Redis 7, 127.0.0.1:6379)
+  - hole-finder-worker (Celery: ingest/process/detect queues, 4 concurrency)
+  - hole-finder-gpu-worker (Celery: gpu queue, /dev/kfd+/dev/dri, HSA_OVERRIDE_GFX_VERSION=10.3.0)
+  - hole-finder-autoheal
 - Git repo at ~/anomalies-browser (for running tests — deployment is via Docker image)
 - Arch Linux
 
@@ -64,7 +64,7 @@ COPC/LAZ tile
 ## Project Structure (key files)
 
 ```
-src/magic_eyes/
+src/hole_finder/
   main.py                          # FastAPI app factory, SPA serving
   config.py                        # Pydantic Settings from .env
   db/models.py                     # SQLAlchemy + GeoAlchemy2 ORM
@@ -158,10 +158,10 @@ uv run pytest tests/unit/ -v
 ### Process a real tile
 ```bash
 # Inside the Docker container on .111:
-docker exec magic-eyes-worker uv run python3 -c "
-from magic_eyes.processing.pipeline import ProcessingPipeline
+docker exec hole-finder-worker uv run python3 -c "
+from hole_finder.processing.pipeline import ProcessingPipeline
 from pathlib import Path
-result = ProcessingPipeline(output_dir=Path('/data/magic-eyes/processed/my_tile')).process_dem_file(Path('/data/magic-eyes/processed/my_tile/dem.tif'), force=True)
+result = ProcessingPipeline(output_dir=Path('/data/hole-finder/processed/my_tile')).process_dem_file(Path('/data/hole-finder/processed/my_tile/dem.tif'), force=True)
 print(result.derivative_paths)
 "
 ```
@@ -170,7 +170,7 @@ print(result.derivative_paths)
 After detection, transform UTM→WGS84 with pyproj, create Detection ORM objects with from_shape(Point(lon,lat)), add to session, commit.
 
 ### Add a new detection pass
-1. Create `src/magic_eyes/detection/passes/my_pass.py`
+1. Create `src/hole_finder/detection/passes/my_pass.py`
 2. Implement DetectionPass ABC (name, version, required_derivatives, run)
 3. Decorate with `@register_pass`
 4. Add import to `passes/__init__.py`
@@ -178,8 +178,8 @@ After detection, transform UTM→WGS84 with pyproj, create Detection ORM objects
 6. Write test in `tests/unit/test_detection_passes.py`
 
 ### Add a new API endpoint
-1. Create or edit file in `src/magic_eyes/api/routes/`
-2. Register router in `src/magic_eyes/main.py`
+1. Create or edit file in `src/hole_finder/api/routes/`
+2. Register router in `src/hole_finder/main.py`
 3. Add test in `tests/unit/test_api.py` route structure test
 4. If new DB table needed: add model in `db/models.py`, write migration in `alembic/versions/`
 

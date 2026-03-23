@@ -12,8 +12,8 @@ from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 from sqlalchemy import select, func
 
-from magic_eyes.db.engine import async_session_factory
-from magic_eyes.db.models import FeatureType, GroundTruthSite, GroundTruthSource
+from hole_finder.db.engine import async_session_factory
+from hole_finder.db.models import FeatureType, GroundTruthSite, GroundTruthSource
 
 FEATURE_TYPE_MAP = {
     "cave_entrance": FeatureType.CAVE_ENTRANCE,

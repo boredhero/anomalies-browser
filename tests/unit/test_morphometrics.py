@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from magic_eyes.detection.postprocess.morphometrics import (
+from hole_finder.detection.postprocess.morphometrics import (
     compute_area,
     compute_circularity,
     compute_depth,

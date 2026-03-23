@@ -5,13 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from magic_eyes.ingest.manager import (
+from hole_finder.ingest.manager import (
     SOURCE_REGISTRY,
     get_source,
     get_sources_for_region,
     load_region_bbox,
 )
-from magic_eyes.ingest.sources.usgs_3dep import USGS3DEPSource
+from hole_finder.ingest.sources.usgs_3dep import USGS3DEPSource
 
 
 class TestSourceRegistry:

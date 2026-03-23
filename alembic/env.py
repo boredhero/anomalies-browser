@@ -7,8 +7,8 @@ from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from magic_eyes.config import settings
-from magic_eyes.db.models import Base
+from hole_finder.config import settings
+from hole_finder.db.models import Base
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)

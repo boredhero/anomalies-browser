@@ -34,7 +34,7 @@ pytestmark = pytest.mark.skipif(
 
 def _process_and_load(dem_path: Path, tmpdir: Path):
     """Run native pipeline and return PassInput."""
-    from magic_eyes.processing.pipeline import ProcessingPipeline
+    from hole_finder.processing.pipeline import ProcessingPipeline
     result = ProcessingPipeline(output_dir=tmpdir / "out").process_dem_file(dem_path, force=True)
     return make_pass_input_from_geotiff(dem_path, result.derivative_paths)
 
@@ -43,28 +43,28 @@ def _process_and_load(dem_path: Path, tmpdir: Path):
 
 class TestFillDifferencePass:
     def test_detects_pit(self):
-        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        from hole_finder.detection.passes.fill_difference import FillDifferencePass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
             assert len(FillDifferencePass().run(inp)) >= 1
 
     def test_no_false_pos_flat(self):
-        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        from hole_finder.detection.passes.fill_difference import FillDifferencePass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)
             assert len(FillDifferencePass().run(inp)) == 0
 
     def test_no_false_pos_slope(self):
-        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        from hole_finder.detection.passes.fill_difference import FillDifferencePass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_slope_geotiff(d), d)
             assert len(FillDifferencePass().run(inp)) == 0
 
     def test_rejects_shallow(self):
-        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        from hole_finder.detection.passes.fill_difference import FillDifferencePass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=0.2), d)
@@ -72,7 +72,7 @@ class TestFillDifferencePass:
             assert len(FillDifferencePass().run(inp)) == 0
 
     def test_multiple_depressions(self):
-        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        from hole_finder.detection.passes.fill_difference import FillDifferencePass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             yg = np.arange(400, dtype=np.float32) * 0.01
@@ -87,7 +87,7 @@ class TestFillDifferencePass:
             assert len(FillDifferencePass().run(inp)) >= 2
 
     def test_respects_max_area(self):
-        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
+        from hole_finder.detection.passes.fill_difference import FillDifferencePass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=3.0, radius=50.0), d)
@@ -100,7 +100,7 @@ class TestFillDifferencePass:
 
 class TestLocalReliefModelPass:
     def test_detects_pit(self):
-        from magic_eyes.detection.passes.local_relief_model import LocalReliefModelPass
+        from hole_finder.detection.passes.local_relief_model import LocalReliefModelPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
@@ -108,7 +108,7 @@ class TestLocalReliefModelPass:
             assert len(candidates) >= 1
 
     def test_no_false_pos_flat(self):
-        from magic_eyes.detection.passes.local_relief_model import LocalReliefModelPass
+        from hole_finder.detection.passes.local_relief_model import LocalReliefModelPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)
@@ -116,8 +116,8 @@ class TestLocalReliefModelPass:
             assert len(LocalReliefModelPass().run(inp)) == 0
 
     def test_feature_type_is_cave(self):
-        from magic_eyes.detection.passes.local_relief_model import LocalReliefModelPass
-        from magic_eyes.detection.base import FeatureType
+        from hole_finder.detection.passes.local_relief_model import LocalReliefModelPass
+        from hole_finder.detection.base import FeatureType
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
@@ -130,7 +130,7 @@ class TestLocalReliefModelPass:
 
 class TestCurvaturePass:
     def test_detects_depression(self):
-        from magic_eyes.detection.passes.curvature import CurvaturePass
+        from hole_finder.detection.passes.curvature import CurvaturePass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
@@ -138,7 +138,7 @@ class TestCurvaturePass:
             assert len(CurvaturePass().run(inp)) >= 1
 
     def test_no_false_pos_flat(self):
-        from magic_eyes.detection.passes.curvature import CurvaturePass
+        from hole_finder.detection.passes.curvature import CurvaturePass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)
@@ -149,7 +149,7 @@ class TestCurvaturePass:
 
 class TestSkyViewFactorPass:
     def test_detects_pit(self):
-        from magic_eyes.detection.passes.sky_view_factor import SkyViewFactorPass
+        from hole_finder.detection.passes.sky_view_factor import SkyViewFactorPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=8.0, radius=15.0, size=100), d)
@@ -162,7 +162,7 @@ class TestSkyViewFactorPass:
             assert len(SkyViewFactorPass().run(inp)) >= 1
 
     def test_no_false_pos_flat(self):
-        from magic_eyes.detection.passes.sky_view_factor import SkyViewFactorPass
+        from hole_finder.detection.passes.sky_view_factor import SkyViewFactorPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d, size=100), d)
@@ -173,7 +173,7 @@ class TestSkyViewFactorPass:
 
 class TestTPIPass:
     def test_detects_depression(self):
-        from magic_eyes.detection.passes.tpi import TPIPass
+        from hole_finder.detection.passes.tpi import TPIPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
@@ -181,7 +181,7 @@ class TestTPIPass:
             assert len(TPIPass().run(inp)) >= 1
 
     def test_no_false_pos_flat(self):
-        from magic_eyes.detection.passes.tpi import TPIPass
+        from hole_finder.detection.passes.tpi import TPIPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)
@@ -192,7 +192,7 @@ class TestTPIPass:
 
 class TestMorphometricFilterPass:
     def test_computes_morphometrics(self):
-        from magic_eyes.detection.passes.morphometric_filter import MorphometricFilterPass
+        from hole_finder.detection.passes.morphometric_filter import MorphometricFilterPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=20.0), d)
@@ -209,15 +209,15 @@ class TestMorphometricFilterPass:
             assert "wall_slope_deg" in m
 
     def test_no_false_pos_flat(self):
-        from magic_eyes.detection.passes.morphometric_filter import MorphometricFilterPass
+        from hole_finder.detection.passes.morphometric_filter import MorphometricFilterPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)
             assert len(MorphometricFilterPass().run(inp)) == 0
 
     def test_classifies_feature_type(self):
-        from magic_eyes.detection.passes.morphometric_filter import MorphometricFilterPass
-        from magic_eyes.detection.base import FeatureType
+        from hole_finder.detection.passes.morphometric_filter import MorphometricFilterPass
+        from hole_finder.detection.base import FeatureType
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=20.0), d)
@@ -231,14 +231,14 @@ class TestMorphometricFilterPass:
 
 class TestPointDensityPass:
     def test_empty_without_point_cloud(self):
-        from magic_eyes.detection.passes.point_density import PointDensityPass
+        from hole_finder.detection.passes.point_density import PointDensityPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)
             assert len(PointDensityPass().run(inp)) == 0
 
     def test_detects_void(self):
-        from magic_eyes.detection.passes.point_density import PointDensityPass
+        from hole_finder.detection.passes.point_density import PointDensityPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d, size=100), d)
@@ -255,14 +255,14 @@ class TestPointDensityPass:
 
 class TestMultiReturnPass:
     def test_empty_without_point_cloud(self):
-        from magic_eyes.detection.passes.multi_return import MultiReturnPass
+        from hole_finder.detection.passes.multi_return import MultiReturnPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)
             assert len(MultiReturnPass().run(inp)) == 0
 
     def test_detects_anomalous_returns(self):
-        from magic_eyes.detection.passes.multi_return import MultiReturnPass
+        from hole_finder.detection.passes.multi_return import MultiReturnPass
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d, size=100), d)
@@ -281,17 +281,17 @@ class TestMultiReturnPass:
 
 class TestPassRunnerToml:
     def test_load_cave_config(self):
-        from magic_eyes.detection.runner import PassRunner
+        from hole_finder.detection.runner import PassRunner
         runner = PassRunner.from_toml(Path("configs/passes/cave_hunting.toml"))
         assert len(runner.passes) >= 5
 
     def test_load_sinkhole_config(self):
-        from magic_eyes.detection.runner import PassRunner
+        from hole_finder.detection.runner import PassRunner
         runner = PassRunner.from_toml(Path("configs/passes/sinkhole_survey.toml"))
         assert len(runner.passes) >= 4
 
     def test_cave_config_detects_pit(self):
-        from magic_eyes.detection.runner import PassRunner
+        from hole_finder.detection.runner import PassRunner
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
@@ -299,7 +299,7 @@ class TestPassRunnerToml:
             assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) >= 1
 
     def test_sinkhole_config_detects_pit(self):
-        from magic_eyes.detection.runner import PassRunner
+        from hole_finder.detection.runner import PassRunner
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
@@ -307,7 +307,7 @@ class TestPassRunnerToml:
             assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) >= 1
 
     def test_no_false_pos_flat(self):
-        from magic_eyes.detection.runner import PassRunner
+        from hole_finder.detection.runner import PassRunner
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)

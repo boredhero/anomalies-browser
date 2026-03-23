@@ -34,7 +34,7 @@ pytestmark = pytest.mark.skipif(
 
 class TestNativePipeline:
     def test_process_dem_produces_derivatives(self):
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -43,7 +43,7 @@ class TestNativePipeline:
             assert len(result.derivative_paths) >= 8
 
     def test_fill_difference_detects_pit(self):
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -54,7 +54,7 @@ class TestNativePipeline:
             assert fd.max() > 1.0
 
     def test_cached_not_recomputed(self):
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -67,8 +67,8 @@ class TestNativePipeline:
 
 class TestDetectionOnNativeDerivatives:
     def test_fill_difference_pass(self):
-        from magic_eyes.detection.passes.fill_difference import FillDifferencePass
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.detection.passes.fill_difference import FillDifferencePass
+        from hole_finder.processing.pipeline import ProcessingPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -78,8 +78,8 @@ class TestDetectionOnNativeDerivatives:
             assert len(FillDifferencePass().run(inp)) >= 1
 
     def test_full_config_detects(self):
-        from magic_eyes.detection.runner import PassRunner
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.detection.runner import PassRunner
+        from hole_finder.processing.pipeline import ProcessingPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -90,8 +90,8 @@ class TestDetectionOnNativeDerivatives:
             assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) >= 1
 
     def test_flat_no_detections(self):
-        from magic_eyes.detection.runner import PassRunner
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.detection.runner import PassRunner
+        from hole_finder.processing.pipeline import ProcessingPipeline
 
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
@@ -104,13 +104,13 @@ class TestDetectionOnNativeDerivatives:
 
 class TestTileManager:
     def test_add_and_query(self):
-        from magic_eyes.processing.tile_manager import ManagedTile, TileManager
+        from hole_finder.processing.tile_manager import ManagedTile, TileManager
         tm = TileManager()
         tm.add_tile(ManagedTile(tile_id=uuid4(), bbox=box(-79.8, 39.7, -79.7, 39.8)))
         assert len(tm.query_bbox(-80.0, 39.5, -79.5, 40.0)) == 1
 
     def test_no_results_outside(self):
-        from magic_eyes.processing.tile_manager import ManagedTile, TileManager
+        from hole_finder.processing.tile_manager import ManagedTile, TileManager
         tm = TileManager()
         tm.add_tile(ManagedTile(tile_id=uuid4(), bbox=box(-79.8, 39.7, -79.7, 39.8)))
         assert len(tm.query_bbox(-75.0, 40.0, -74.0, 41.0)) == 0
@@ -118,7 +118,7 @@ class TestTileManager:
 
 class TestPointCloud:
     def test_density_void(self):
-        from magic_eyes.processing.point_cloud import compute_point_density
+        from hole_finder.processing.point_cloud import compute_point_density
         rng = np.random.default_rng(42)
         n = 10000
         x, y, z = rng.uniform(0, 100, n), rng.uniform(0, 100, n), rng.uniform(0, 10, n)
@@ -127,7 +127,7 @@ class TestPointCloud:
         assert density.min() < density.mean() * 0.3
 
     def test_multi_return_ratio(self):
-        from magic_eyes.processing.point_cloud import compute_multi_return_ratio
+        from hole_finder.processing.point_cloud import compute_multi_return_ratio
         n = 1000
         x, y = np.random.uniform(0, 100, n), np.random.uniform(0, 100, n)
         ratio, _ = compute_multi_return_ratio(x, y, np.ones(n, dtype=np.int32), np.full(n, 3, dtype=np.int32), cell_size=10.0)

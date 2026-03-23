@@ -5,16 +5,16 @@
 services:
   db:
     image: postgis/postgis:16-3.4
-    container_name: magic-eyes-db
+    container_name: hole-finder-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: magic_eyes
-      POSTGRES_USER: magic_eyes
+      POSTGRES_DB: hole_finder
+      POSTGRES_USER: hole_finder
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - magic_eyes_pgdata:/var/lib/postgresql/data
+      - hole_finder_pgdata:/var/lib/postgresql/data
     command:
       - postgres
       - -c
@@ -24,35 +24,35 @@ services:
       - -c
       - effective_cache_size=48GB
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U magic_eyes"]
+      test: ["CMD-SHELL", "pg_isready -U hole_finder"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: magic-eyes-redis
+    container_name: hole-finder-redis
     restart: unless-stopped
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
-      - magic_eyes_redis:/data
+      - hole_finder_redis:/data
     command: redis-server --maxmemory 2gb --maxmemory-policy allkeys-lru
 
   api:
     image: ghcr.io/boredhero/anomalies-browser:latest
-    container_name: magic-eyes-api
+    container_name: hole-finder-api
     restart: unless-stopped
     ports:
       - "0.0.0.0:9747:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://magic_eyes:${POSTGRES_PASSWORD:-changeme}@db:5432/magic_eyes
+      DATABASE_URL: postgresql+asyncpg://hole_finder:${POSTGRES_PASSWORD:-changeme}@db:5432/hole_finder
       REDIS_URL: redis://redis:6379/0
-      DATA_DIR: /data/magic-eyes
+      DATA_DIR: /data/hole-finder
     volumes:
       - ./configs:/app/configs:ro
-      - magic_eyes_logs:/app/logs
-      - /data/magic-eyes:/data/magic-eyes
+      - hole_finder_logs:/app/logs
+      - /data/hole-finder:/data/hole-finder
     depends_on:
       db:
         condition: service_healthy
@@ -69,19 +69,19 @@ services:
 
   celery-worker:
     image: ghcr.io/boredhero/anomalies-browser:latest
-    container_name: magic-eyes-worker
+    container_name: hole-finder-worker
     restart: unless-stopped
-    command: ["uv", "run", "celery", "-A", "magic_eyes.workers.celery_app", "worker",
+    command: ["uv", "run", "celery", "-A", "hole_finder.workers.celery_app", "worker",
               "--loglevel=info", "--concurrency=4",
               "-Q", "default,ingest,process,detect"]
     environment:
-      DATABASE_URL: postgresql+asyncpg://magic_eyes:${POSTGRES_PASSWORD:-changeme}@db:5432/magic_eyes
+      DATABASE_URL: postgresql+asyncpg://hole_finder:${POSTGRES_PASSWORD:-changeme}@db:5432/hole_finder
       REDIS_URL: redis://redis:6379/0
-      DATA_DIR: /data/magic-eyes
+      DATA_DIR: /data/hole-finder
     volumes:
       - ./configs:/app/configs:ro
-      - magic_eyes_logs:/app/logs
-      - /data/magic-eyes:/data/magic-eyes
+      - hole_finder_logs:/app/logs
+      - /data/hole-finder:/data/hole-finder
     depends_on:
       db:
         condition: service_healthy
@@ -90,19 +90,19 @@ services:
 
   celery-gpu:
     image: ghcr.io/boredhero/anomalies-browser:latest
-    container_name: magic-eyes-gpu-worker
+    container_name: hole-finder-gpu-worker
     restart: unless-stopped
-    command: ["uv", "run", "celery", "-A", "magic_eyes.workers.celery_app", "worker",
+    command: ["uv", "run", "celery", "-A", "hole_finder.workers.celery_app", "worker",
               "--loglevel=info", "--concurrency=1", "-Q", "gpu"]
     environment:
-      DATABASE_URL: postgresql+asyncpg://magic_eyes:${POSTGRES_PASSWORD:-changeme}@db:5432/magic_eyes
+      DATABASE_URL: postgresql+asyncpg://hole_finder:${POSTGRES_PASSWORD:-changeme}@db:5432/hole_finder
       REDIS_URL: redis://redis:6379/0
-      DATA_DIR: /data/magic-eyes
+      DATA_DIR: /data/hole-finder
       HSA_OVERRIDE_GFX_VERSION: "10.3.0"
     volumes:
       - ./configs:/app/configs:ro
-      - magic_eyes_logs:/app/logs
-      - /data/magic-eyes:/data/magic-eyes
+      - hole_finder_logs:/app/logs
+      - /data/hole-finder:/data/hole-finder
     devices:
       - /dev/kfd:/dev/kfd
       - /dev/dri:/dev/dri
@@ -117,12 +117,12 @@ services:
 
   autoheal:
     image: willfarrell/autoheal
-    container_name: magic-eyes-autoheal
+    container_name: hole-finder-autoheal
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
-  magic_eyes_pgdata:
-  magic_eyes_redis:
-  magic_eyes_logs:
+  hole_finder_pgdata:
+  hole_finder_redis:
+  hole_finder_logs:

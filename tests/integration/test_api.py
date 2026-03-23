@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from magic_eyes.main import create_app
+from hole_finder.main import create_app
 
 
 @pytest.fixture
