@@ -29,8 +29,8 @@ NY_CAVES = [s for s in ALL_SITES if s["state"] == "NY"]
 
 # Check DB availability
 try:
-    from magic_eyes.db.engine import async_session_factory
-    from magic_eyes.db.repositories import get_detections_near_point
+    from hole_finder.db.engine import async_session_factory
+    from hole_finder.db.repositories import get_detections_near_point
 
     async def _check():
         async with async_session_factory() as session:

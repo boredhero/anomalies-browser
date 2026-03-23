@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Download all ground truth datasets for validation.
 
-Usage: uv run python scripts/download_ground_truth.py [--data-dir /data/magic-eyes]
+Usage: uv run python scripts/download_ground_truth.py [--data-dir /data/hole-finder]
 
 Downloads:
 - PASDA karst features shapefile (111K+ points)
@@ -17,8 +17,8 @@ from pathlib import Path
 import click
 import httpx
 
-from magic_eyes.config import settings
-from magic_eyes.utils.logging import log, setup_logging
+from hole_finder.config import settings
+from hole_finder.utils.logging import log, setup_logging
 
 DOWNLOADS = {
     "pasda_karst": {

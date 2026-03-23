@@ -8,7 +8,7 @@ They verify route structure, request validation, and response schemas.
 import pytest
 from fastapi.testclient import TestClient
 
-from magic_eyes.main import create_app
+from hole_finder.main import create_app
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ class TestRasterTilesEndpoint:
 class TestVectorTiles:
     def test_tile_to_bbox(self):
         """Test ZXY to bbox conversion."""
-        from magic_eyes.api.routes.tiles import _tile_to_bbox
+        from hole_finder.api.routes.tiles import _tile_to_bbox
 
         # Tile 0/0/0 should cover the whole world
         bbox = _tile_to_bbox(0, 0, 0)

@@ -12,19 +12,19 @@ import numpy as np
 import pytest
 from rasterio.transform import from_bounds
 
-from magic_eyes.detection.base import PassInput
-from magic_eyes.detection.passes.random_forest import (
+from hole_finder.detection.base import PassInput
+from hole_finder.detection.passes.random_forest import (
     FEATURE_NAMES,
     RandomForestPass,
     extract_features,
 )
-from magic_eyes.detection.passes.unet_segmentation import (
+from hole_finder.detection.passes.unet_segmentation import (
     UNetSegmentationPass,
     _prepare_input_tensor,
 )
-from magic_eyes.detection.passes.yolo_detector import YOLODetectorPass
-from magic_eyes.detection.registry import PassRegistry
-from magic_eyes.ml.training import (
+from hole_finder.detection.passes.yolo_detector import YOLODetectorPass
+from hole_finder.detection.registry import PassRegistry
+from hole_finder.ml.training import (
     extract_rf_training_data,
     extract_unet_patches,
     train_random_forest,
@@ -53,7 +53,7 @@ def _make_test_mask(size=100):
 def _get_native_derivatives(dem_path: Path, tmpdir: Path) -> dict[str, np.ndarray]:
     """Run native pipeline and return derivative arrays."""
     from tests.fixtures.synthetic_dem import make_pass_input_from_geotiff
-    from magic_eyes.processing.pipeline import ProcessingPipeline
+    from hole_finder.processing.pipeline import ProcessingPipeline
     result = ProcessingPipeline(output_dir=tmpdir / "out").process_dem_file(dem_path, force=True)
     inp = make_pass_input_from_geotiff(dem_path, result.derivative_paths)
     return inp.derivatives
@@ -76,7 +76,7 @@ class TestMLPassesRegistered:
 class TestFeatureExtraction:
     def test_extract_10_features(self):
         from tests.fixtures.synthetic_dem import make_sinkhole_geotiff, make_pass_input_from_geotiff
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             dem_path = make_sinkhole_geotiff(d)
@@ -89,7 +89,7 @@ class TestFeatureExtraction:
 
     def test_features_are_finite(self):
         from tests.fixtures.synthetic_dem import make_sinkhole_geotiff, make_pass_input_from_geotiff
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             dem_path = make_sinkhole_geotiff(d)
@@ -101,7 +101,7 @@ class TestFeatureExtraction:
 
     def test_depth_feature_positive(self):
         from tests.fixtures.synthetic_dem import make_sinkhole_geotiff, make_pass_input_from_geotiff
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             dem_path = make_sinkhole_geotiff(d)
@@ -124,7 +124,7 @@ class TestRandomForestPass:
     @pytest.mark.skipif(not NATIVE_AVAILABLE, reason="Requires GDAL + WhiteboxTools")
     def test_works_with_trained_model(self):
         from tests.fixtures.synthetic_dem import make_sinkhole_geotiff, make_pass_input_from_geotiff
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             dem_path = make_sinkhole_geotiff(d)
@@ -146,7 +146,7 @@ class TestRandomForestPass:
 class TestTrainingPipeline:
     def test_rf_training_data_extraction(self):
         from tests.fixtures.synthetic_dem import make_sinkhole_geotiff, make_pass_input_from_geotiff
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             dem_path = make_sinkhole_geotiff(d)
@@ -160,7 +160,7 @@ class TestTrainingPipeline:
 
     def test_rf_training_produces_model(self):
         from tests.fixtures.synthetic_dem import make_sinkhole_geotiff, make_pass_input_from_geotiff
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             dem_path = make_sinkhole_geotiff(d)
@@ -175,7 +175,7 @@ class TestTrainingPipeline:
 
     def test_unet_patch_extraction(self):
         from tests.fixtures.synthetic_dem import make_sinkhole_geotiff, make_pass_input_from_geotiff
-        from magic_eyes.processing.pipeline import ProcessingPipeline
+        from hole_finder.processing.pipeline import ProcessingPipeline
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             dem_path = make_sinkhole_geotiff(d, size=300)
@@ -202,7 +202,7 @@ class TestUNetArchitecture:
     def test_unet_model_builds(self):
         try:
             import torch
-            from magic_eyes.detection.passes.unet_segmentation import _build_unet
+            from hole_finder.detection.passes.unet_segmentation import _build_unet
             UNet = _build_unet()
             model = UNet(in_channels=5, out_channels=1)
             x = torch.randn(1, 5, 256, 256)

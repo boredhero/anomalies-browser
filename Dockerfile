@@ -36,4 +36,4 @@ VOLUME /app/logs
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "magic_eyes.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]
+CMD ["uv", "run", "uvicorn", "hole_finder.main:app", "--host", "0.0.0.0", "--port", "8000", "--log-level", "info"]

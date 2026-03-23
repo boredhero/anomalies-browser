@@ -3,8 +3,8 @@
 import pytest
 from shapely.geometry import Point
 
-from magic_eyes.detection.base import Candidate, FeatureType
-from magic_eyes.detection.fusion import ResultFuser
+from hole_finder.detection.base import Candidate, FeatureType
+from hole_finder.detection.fusion import ResultFuser
 
 
 class TestResultFuser:

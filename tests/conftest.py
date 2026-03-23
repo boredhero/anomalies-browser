@@ -11,8 +11,8 @@ def ensure_passes_registered():
     """Ensure all passes are registered before each test."""
     import importlib
 
-    import magic_eyes.detection.passes as passes_mod
-    from magic_eyes.detection.passes import (
+    import hole_finder.detection.passes as passes_mod
+    from hole_finder.detection.passes import (
         curvature,
         fill_difference,
         local_relief_model,

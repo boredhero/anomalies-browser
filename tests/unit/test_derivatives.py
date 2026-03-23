@@ -33,7 +33,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def _run_pipeline(dem_path: Path, tmpdir: Path) -> dict[str, Path]:
-    from magic_eyes.processing.pipeline import ProcessingPipeline
+    from hole_finder.processing.pipeline import ProcessingPipeline
     result = ProcessingPipeline(output_dir=tmpdir / "out").process_dem_file(dem_path, force=True)
     return result.derivative_paths
 

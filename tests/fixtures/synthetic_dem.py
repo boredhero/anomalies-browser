@@ -10,7 +10,7 @@ import numpy as np
 import rasterio
 from rasterio.transform import from_bounds
 
-from magic_eyes.detection.base import PassInput
+from hole_finder.detection.base import PassInput
 
 
 def write_geotiff(path: Path, dem: np.ndarray, resolution: float = 1.0) -> Path:

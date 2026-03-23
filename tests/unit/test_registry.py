@@ -2,7 +2,7 @@
 
 import pytest
 
-from magic_eyes.detection.registry import PassRegistry
+from hole_finder.detection.registry import PassRegistry
 
 
 class TestPassRegistry:
