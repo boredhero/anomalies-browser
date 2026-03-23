@@ -37,8 +37,13 @@ def make_sinkhole_geotiff(tmpdir: Path, depth: float = 5.0, radius: float = 12.0
 
 
 def make_flat_geotiff(tmpdir: Path, size: int = 200) -> Path:
-    """Create a perfectly flat GeoTIFF."""
-    dem = np.full((size, size), 500.0, dtype=np.float32)
+    """Create a nearly flat GeoTIFF with tiny gradient.
+
+    Not perfectly flat — WBT FillDepressions hangs on perfectly flat surfaces.
+    The 0.001m/pixel gradient is imperceptible but prevents the hang.
+    """
+    y = np.arange(size, dtype=np.float32) * 0.001
+    dem = np.tile(y[:, np.newaxis], (1, size)) + 500.0
     return write_geotiff(tmpdir / "flat_dem.tif", dem)
 
 

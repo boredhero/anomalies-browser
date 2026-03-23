@@ -108,27 +108,26 @@ def compute_all_derivatives(
     dem = str(dem_path)
     filled = str(filled_dem_path)
 
-    # (name, function, args) — args include output path as last element
+    # (name, output_path, function, args)
     tasks = [
-        ("hillshade", compute_hillshade, [dem, str(output_dir / "hillshade.tif")]),
-        ("slope", compute_slope, [dem, str(output_dir / "slope.tif")]),
-        ("tpi", compute_tpi, [dem, str(output_dir / "tpi.tif")]),
-        ("roughness", compute_roughness, [dem, str(output_dir / "roughness.tif")]),
-        ("svf", compute_svf, [dem, str(output_dir / "svf.tif")]),
-        ("lrm_50m", compute_lrm, [dem, str(output_dir / "lrm_50m.tif"), 50]),
-        ("lrm_100m", compute_lrm, [dem, str(output_dir / "lrm_100m.tif"), 100]),
-        ("lrm_200m", compute_lrm, [dem, str(output_dir / "lrm_200m.tif"), 200]),
-        ("profile_curvature", compute_profile_curvature, [dem, str(output_dir / "profile_curvature.tif")]),
-        ("plan_curvature", compute_plan_curvature, [dem, str(output_dir / "plan_curvature.tif")]),
-        ("fill_difference", compute_fill_difference, [dem, filled, str(output_dir / "fill_difference.tif")]),
+        ("hillshade", output_dir / "hillshade.tif", compute_hillshade, [dem, str(output_dir / "hillshade.tif")]),
+        ("slope", output_dir / "slope.tif", compute_slope, [dem, str(output_dir / "slope.tif")]),
+        ("tpi", output_dir / "tpi.tif", compute_tpi, [dem, str(output_dir / "tpi.tif")]),
+        ("roughness", output_dir / "roughness.tif", compute_roughness, [dem, str(output_dir / "roughness.tif")]),
+        ("svf", output_dir / "svf.tif", compute_svf, [dem, str(output_dir / "svf.tif")]),
+        ("lrm_50m", output_dir / "lrm_50m.tif", compute_lrm, [dem, str(output_dir / "lrm_50m.tif"), 50]),
+        ("lrm_100m", output_dir / "lrm_100m.tif", compute_lrm, [dem, str(output_dir / "lrm_100m.tif"), 100]),
+        ("lrm_200m", output_dir / "lrm_200m.tif", compute_lrm, [dem, str(output_dir / "lrm_200m.tif"), 200]),
+        ("profile_curvature", output_dir / "profile_curvature.tif", compute_profile_curvature, [dem, str(output_dir / "profile_curvature.tif")]),
+        ("plan_curvature", output_dir / "plan_curvature.tif", compute_plan_curvature, [dem, str(output_dir / "plan_curvature.tif")]),
+        ("fill_difference", output_dir / "fill_difference.tif", compute_fill_difference, [dem, filled, str(output_dir / "fill_difference.tif")]),
     ]
 
     results: dict[str, Path] = {}
 
     # Check cache first
     to_compute = []
-    for name, fn, args in tasks:
-        out_path = Path(args[-1]) if name != "fill_difference" else Path(args[-1])
+    for name, out_path, fn, args in tasks:
         if out_path.exists():
             results[name] = out_path
         else:
