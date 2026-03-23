@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useJobs, useCreateJob, useCancelJob } from '../../hooks/useJobs';
 import { useStore } from '../../store';
-import { Loader2, Play, X, PenTool, Clock, CheckCircle2, AlertCircle, Ban } from 'lucide-react';
+import { Loader2, Play, X, PenTool, Clock, CheckCircle2, AlertCircle, Ban, MapPin } from 'lucide-react';
 import type { Job } from '../../types';
 
 const CONFIGS = ['sinkhole_survey', 'cave_hunting', 'mine_detection', 'salt_dome_detection', 'lava_tube_detection'];
@@ -29,29 +29,29 @@ export default function JobPanel() {
   const completedJobs = jobs.filter((j: Job) => j.status !== 'RUNNING' && j.status !== 'PENDING');
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-5 p-5">
       {/* Active jobs — always visible at top */}
       {activeJobs.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-blue-400 mb-2 flex items-center gap-1">
-            <Loader2 size={12} className="animate-spin" /> Active ({activeJobs.length})
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-blue-400 mb-3 flex items-center gap-2">
+            <Loader2 size={16} className="animate-spin" /> Active ({activeJobs.length})
           </h3>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {activeJobs.map((job: Job) => (
-              <div key={job.id} className="bg-blue-950/50 border border-blue-800 rounded p-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs text-blue-200 font-medium">{job.job_type}</span>
+              <div key={job.id} className="bg-blue-950/50 border border-blue-800 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-blue-200 font-medium">{job.job_type.replace(/_/g, ' ')}</span>
                   <StatusBadge status={job.status} />
                 </div>
-                <div className="h-2 bg-slate-700 rounded-full overflow-hidden mb-1">
+                <div className="h-3 bg-slate-700 rounded-full overflow-hidden mb-2">
                   <div className="h-full bg-blue-500 rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${Math.max(job.progress, 2)}%` }} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-blue-300">{job.progress.toFixed(0)}%</span>
+                  <span className="text-sm font-mono text-blue-300">{job.progress.toFixed(0)}%</span>
                   <button onClick={() => cancelJob.mutate(job.id)}
-                    className="text-red-400 hover:text-red-300 text-xs flex items-center gap-0.5">
-                    <X size={10} /> Cancel
+                    className="text-red-400 hover:text-red-300 text-sm flex items-center gap-1">
+                    <X size={14} /> Cancel
                   </button>
                 </div>
               </div>
@@ -62,53 +62,53 @@ export default function JobPanel() {
 
       {/* Submit new job */}
       <section>
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2">New Job</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">New Job</h3>
 
-        <div className="flex gap-1 mb-2">
+        <div className="flex gap-1.5 mb-3">
           <button onClick={() => { setInputMode('region'); setDrawingAOI(false); }}
-            className={`flex-1 text-xs py-1.5 rounded ${inputMode === 'region' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
+            className={`flex-1 text-sm py-2 rounded-lg font-medium transition-colors ${inputMode === 'region' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
             Region
           </button>
           <button onClick={() => { setInputMode('pin'); setDrawingAOI(false); }}
-            className={`flex-1 text-xs py-1.5 rounded flex items-center justify-center gap-1 ${inputMode === 'pin' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
-            Pin + Radius
+            className={`flex-1 text-sm py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-colors ${inputMode === 'pin' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
+            <MapPin size={14} /> Pin
           </button>
           <button onClick={() => { setInputMode('draw'); setDrawingAOI(true); }}
-            className={`flex-1 text-xs py-1.5 rounded flex items-center justify-center gap-1 ${inputMode === 'draw' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300'}`}>
-            <PenTool size={12} /> Draw
+            className={`flex-1 text-sm py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 transition-colors ${inputMode === 'draw' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
+            <PenTool size={14} /> Draw
           </button>
         </div>
 
         {inputMode === 'region' && (
           <select value={region} onChange={(e) => setRegion(e.target.value)}
-            className="w-full bg-slate-800 border border-slate-600 rounded text-sm p-2 text-slate-200 mb-2">
+            className="w-full bg-slate-800 border border-slate-600 rounded-lg text-sm p-3 text-slate-200 mb-3">
             {REGIONS.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ')}</option>)}
           </select>
         )}
         {inputMode === 'pin' && (
-          <div className="flex flex-col gap-1.5 mb-2">
-            <div className="flex gap-1.5">
+          <div className="flex flex-col gap-2 mb-3">
+            <div className="flex gap-2">
               <input value={pinLat} onChange={(e) => setPinLat(e.target.value)} placeholder="Latitude"
-                className="flex-1 bg-slate-800 border border-slate-600 rounded text-sm p-2 text-slate-200" type="number" step="0.001" />
+                className="flex-1 bg-slate-800 border border-slate-600 rounded-lg text-sm p-3 text-slate-200" type="number" step="0.001" />
               <input value={pinLon} onChange={(e) => setPinLon(e.target.value)} placeholder="Longitude"
-                className="flex-1 bg-slate-800 border border-slate-600 rounded text-sm p-2 text-slate-200" type="number" step="0.001" />
+                className="flex-1 bg-slate-800 border border-slate-600 rounded-lg text-sm p-3 text-slate-200" type="number" step="0.001" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400 whitespace-nowrap">Radius: {pinRadius} km</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-400 whitespace-nowrap">Radius: {pinRadius} km</span>
               <input type="range" min={0.5} max={10} step={0.5} value={pinRadius}
                 onChange={(e) => setPinRadius(parseFloat(e.target.value))}
-                className="flex-1 accent-blue-500" />
+                className="flex-1 accent-blue-500 h-2" />
             </div>
           </div>
         )}
         {inputMode === 'draw' && (
-          <div className="text-xs text-slate-400 mb-2 p-2 bg-slate-800 rounded">
-            {drawnAOI ? '✓ AOI drawn on map' : 'Draw polygon on map...'}
+          <div className="text-sm text-slate-400 mb-3 p-3 bg-slate-800 rounded-lg">
+            {drawnAOI ? 'AOI drawn on map' : 'Draw polygon on map...'}
           </div>
         )}
 
         <select value={config} onChange={(e) => setConfig(e.target.value)}
-          className="w-full bg-slate-800 border border-slate-600 rounded text-sm p-2 text-slate-200 mb-2">
+          className="w-full bg-slate-800 border border-slate-600 rounded-lg text-sm p-3 text-slate-200 mb-3">
           {CONFIGS.map(c => <option key={c} value={c}>{c.replace(/_/g, ' ')}</option>)}
         </select>
 
@@ -118,10 +118,9 @@ export default function JobPanel() {
             if (inputMode === 'draw' && drawnAOI) {
               body.bbox = drawnAOI;
             } else if (inputMode === 'pin' && pinLat && pinLon) {
-              // Convert pin + radius to bbox polygon
               const lat = parseFloat(pinLat);
               const lon = parseFloat(pinLon);
-              const r = pinRadius / 111.32; // rough degrees
+              const r = pinRadius / 111.32;
               body.bbox = {
                 type: 'Polygon',
                 coordinates: [[[lon-r, lat-r], [lon+r, lat-r], [lon+r, lat+r], [lon-r, lat+r], [lon-r, lat-r]]],
@@ -133,8 +132,8 @@ export default function JobPanel() {
             setDrawingAOI(false);
           }}
           disabled={createJob.isPending || (inputMode === 'draw' && !drawnAOI) || (inputMode === 'pin' && (!pinLat || !pinLon))}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm py-2 rounded transition-colors">
-          {createJob.isPending ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-3 rounded-xl transition-colors">
+          {createJob.isPending ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
           Submit Job
         </button>
       </section>
@@ -142,18 +141,18 @@ export default function JobPanel() {
       {/* Completed jobs */}
       {completedJobs.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            History {isLoading && <Loader2 size={12} className="inline animate-spin ml-1" />}
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            History {isLoading && <Loader2 size={14} className="inline animate-spin ml-1" />}
           </h3>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-2">
             {completedJobs.slice(0, 20).map((job: Job) => (
-              <div key={job.id} className="bg-slate-800 rounded p-2.5">
+              <div key={job.id} className="bg-slate-800 rounded-lg p-3.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-300">{job.job_type}</span>
+                  <span className="text-sm text-slate-300">{job.job_type.replace(/_/g, ' ')}</span>
                   <StatusBadge status={job.status} />
                 </div>
                 {job.result_summary && (
-                  <div className="text-xs text-slate-500 mt-0.5">
+                  <div className="text-sm text-slate-500 mt-1">
                     {(job.result_summary as any).total_detections != null &&
                       `${(job.result_summary as any).total_detections} detections`}
                     {(job.result_summary as any).tiles_downloaded != null &&
@@ -161,9 +160,9 @@ export default function JobPanel() {
                   </div>
                 )}
                 {job.error_message && (
-                  <div className="text-xs text-red-400 mt-0.5 truncate">{job.error_message}</div>
+                  <div className="text-sm text-red-400 mt-1 truncate">{job.error_message}</div>
                 )}
-                <div className="text-xs text-slate-600 mt-0.5">{job.id.slice(0, 8)}</div>
+                <div className="text-xs text-slate-600 mt-1 font-mono">{job.id.slice(0, 8)}</div>
               </div>
             ))}
           </div>
@@ -184,8 +183,8 @@ function StatusBadge({ status }: { status: string }) {
   const c = config[status] || config.CANCELLED;
   const Icon = c.icon;
   return (
-    <span className={`text-xs px-1.5 py-0.5 rounded border flex items-center gap-0.5 ${c.bg}`}>
-      <Icon size={10} className={status === 'RUNNING' ? 'animate-spin' : ''} />
+    <span className={`text-sm px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${c.bg}`}>
+      <Icon size={13} className={status === 'RUNNING' ? 'animate-spin' : ''} />
       {status}
     </span>
   );
