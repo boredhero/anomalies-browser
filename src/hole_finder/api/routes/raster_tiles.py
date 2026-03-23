@@ -1,17 +1,27 @@
-"""Raster tile endpoints — serve hillshade and terrain-rgb tiles from processed DEMs.
+"""Raster tile endpoints — serve hillshade, terrain-rgb, and composited terrain tiles.
 
-These tiles are pre-rendered GeoTIFFs sliced into 256x256 PNG tiles
-for use as MapLibre raster layers.
+Composited terrain tiles serve high-res LiDAR DEMs where available,
+falling back to AWS Terrarium global tiles (~30m) elsewhere.
+Uses a lazy cache: first request computes + caches, subsequent requests are instant.
 """
 
+import io
 import math
+from pathlib import Path
 
+import httpx
+import numpy as np
 from fastapi import APIRouter
 from fastapi.responses import Response
 
 from hole_finder.config import settings
+from hole_finder.utils.logging import log
 
 router = APIRouter(tags=["raster_tiles"])
+
+# In-memory cache of processed DEM bounds: {path: (west, south, east, north)}
+_dem_bounds_cache: dict[str, tuple[float, float, float, float]] | None = None
+AWS_TERRAIN_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
 
 
 def _tile_to_bbox(z: int, x: int, y: int) -> tuple[float, float, float, float]:
@@ -62,6 +72,169 @@ async def get_raster_tile(
         media_type="image/png",
         headers={"Cache-Control": "public, max-age=60"},
     )
+
+
+def _scan_dem_bounds() -> dict[str, tuple[float, float, float, float]]:
+    """Scan processed DEMs on disk and cache their WGS84 bounds.
+
+    Returns dict mapping DEM file path → (west, south, east, north) in EPSG:4326.
+    """
+    global _dem_bounds_cache
+    if _dem_bounds_cache is not None:
+        return _dem_bounds_cache
+
+    import rasterio
+    from pyproj import Transformer
+
+    bounds = {}
+    processed_dir = settings.processed_dir
+    if not processed_dir.exists():
+        _dem_bounds_cache = bounds
+        return bounds
+
+    for dem_path in processed_dir.glob("*/*_dem.tif"):
+        try:
+            with rasterio.open(dem_path) as src:
+                b = src.bounds
+                crs = src.crs
+                if crs and crs.to_epsg() != 4326:
+                    transformer = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+                    west, south = transformer.transform(b.left, b.bottom)
+                    east, north = transformer.transform(b.right, b.top)
+                else:
+                    west, south, east, north = b.left, b.bottom, b.right, b.top
+                bounds[str(dem_path)] = (west, south, east, north)
+        except Exception as e:
+            log.warning("dem_scan_failed", path=str(dem_path), error=str(e))
+
+    log.info("dem_bounds_scanned", count=len(bounds))
+    _dem_bounds_cache = bounds
+    return bounds
+
+
+def _find_dem_for_tile(west: float, south: float, east: float, north: float) -> str | None:
+    """Find a processed DEM that covers the given WGS84 bbox."""
+    bounds = _scan_dem_bounds()
+    for path, (dw, ds, de, dn) in bounds.items():
+        # Check overlap
+        if dw <= west and ds <= south and de >= east and dn >= north:
+            return path
+    return None
+
+
+def _render_terrain_tile_from_dem(dem_path: str, z: int, x: int, y: int) -> bytes:
+    """Render a 256x256 Terrarium-encoded PNG from a LiDAR DEM GeoTIFF."""
+    import rasterio
+    from rasterio.warp import Resampling, reproject
+
+    bbox = _tile_to_bbox(z, x, y)
+    west, south, east, north = bbox
+
+    # Target: 256x256 in EPSG:4326 (MapLibre terrain tiles use WGS84 bounds)
+    from rasterio.transform import from_bounds
+    dst_transform = from_bounds(west, south, east, north, 256, 256)
+
+    with rasterio.open(dem_path) as src:
+        dst_array = np.zeros((1, 256, 256), dtype=np.float32)
+        reproject(
+            source=rasterio.band(src, 1),
+            destination=dst_array,
+            dst_transform=dst_transform,
+            dst_crs="EPSG:4326",
+            resampling=Resampling.cubic,
+        )
+
+    elevation = dst_array[0]
+    # Handle nodata
+    elevation = np.nan_to_num(elevation, nan=0.0)
+
+    # Terrarium encoding: elevation = (R * 256 + G + B / 256) - 32768
+    encoded = elevation + 32768.0
+    r = np.floor(encoded / 256).astype(np.uint8)
+    g = np.floor(encoded % 256).astype(np.uint8)
+    b = np.floor((encoded * 256) % 256).astype(np.uint8)
+
+    # Create RGB PNG
+    from PIL import Image
+    img = Image.fromarray(np.stack([r, g, b], axis=-1), mode="RGB")
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
+
+@router.get("/raster/terrain/{z}/{x}/{y}.png")
+async def get_composited_terrain_tile(z: int, x: int, y: int):
+    """Serve composited terrain tiles — LiDAR where available, AWS Terrarium elsewhere.
+
+    Uses Terrarium encoding: elevation = (R * 256 + G + B / 256) - 32768
+    Lazy cache: first request computes + saves to disk, subsequent requests serve cached.
+    """
+    # 1. Check cache
+    cache_dir = settings.data_dir / "tile_cache" / "terrain" / str(z) / str(x)
+    tile_path = cache_dir / f"{y}.png"
+
+    if tile_path.exists():
+        return Response(
+            content=tile_path.read_bytes(),
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    # 2. Check if we have a LiDAR DEM covering this tile
+    bbox = _tile_to_bbox(z, x, y)
+    dem_path = _find_dem_for_tile(*bbox)
+
+    if dem_path:
+        # 3a. Render from our high-res LiDAR DEM
+        try:
+            png_bytes = _render_terrain_tile_from_dem(dem_path, z, x, y)
+            # Cache it
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            tile_path.write_bytes(png_bytes)
+            return Response(
+                content=png_bytes,
+                media_type="image/png",
+                headers={"Cache-Control": "public, max-age=86400"},
+            )
+        except Exception as e:
+            log.warning("terrain_render_failed", dem=dem_path, z=z, x=x, y=y, error=str(e))
+            # Fall through to AWS
+
+    # 3b. Proxy from AWS Terrarium tiles
+    url = AWS_TERRAIN_URL.format(z=z, x=x, y=y)
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                png_bytes = resp.content
+                # Cache the AWS tile too
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                tile_path.write_bytes(png_bytes)
+                return Response(
+                    content=png_bytes,
+                    media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=3600"},
+                )
+        except Exception:
+            pass
+
+    # 4. Fallback: flat sea-level tile
+    FLAT_TERRAIN = _make_flat_terrarium_png()
+    return Response(
+        content=FLAT_TERRAIN,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=60"},
+    )
+
+
+def _make_flat_terrarium_png() -> bytes:
+    """Create a 1x1 Terrarium PNG encoding elevation = 0m."""
+    # Terrarium: 0m = (128 * 256 + 0 + 0/256) - 32768 = 0. So R=128, G=0, B=0
+    from PIL import Image
+    img = Image.new("RGB", (1, 1), (128, 0, 0))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
 
 
 @router.get("/raster/terrain-rgb/{z}/{x}/{y}.png")

@@ -321,7 +321,7 @@ function MVTLayerManager() {
       if (!map.getSource('terrain-source')) {
         map.addSource('terrain-source', {
           type: 'raster-dem',
-          tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+          tiles: ['/api/raster/terrain/{z}/{x}/{y}.png'],
           tileSize: 256,
           encoding: 'terrarium',
           maxzoom: 15,
@@ -400,14 +400,14 @@ export default function MapView() {
         if (!map.getSource('terrain-source')) {
           map.addSource('terrain-source', {
             type: 'raster-dem',
-            tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+            tiles: ['/api/raster/terrain/{z}/{x}/{y}.png'],
             tileSize: 256,
             encoding: 'terrarium',
             maxzoom: 15,
           });
         }
       }}
-      terrain={show3DTerrain && basemap !== 'lidar' ? { source: 'terrain-source', exaggeration: terrainExaggeration } : undefined}
+      terrain={show3DTerrain ? { source: 'terrain-source', exaggeration: terrainExaggeration } : undefined}
     >
       {heatmapLayers.length > 0 && <DeckGLOverlay layers={heatmapLayers} />}
       <MVTLayerManager />
