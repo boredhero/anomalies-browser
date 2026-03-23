@@ -3,7 +3,7 @@ name = "magic-eyes"
 version = "0.1.0"
 description = "LiDAR-based terrain anomaly detection platform for caves, mines, and sinkholes"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "GPL-3.0-or-later" }
 requires-python = ">=3.11,<3.13"
 
 dependencies = [

@@ -1,0 +1,96 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv sync --extra dev
+      - run: uv run ruff check src/ tests/
+      - run: uv run pytest tests/unit/ -v --tb=short
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Build Frontend ---
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm install -g pnpm && pnpm install && pnpm build
+
+      # --- Build & Push Docker Image ---
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+      # --- Deploy to gateway (.69) — runs API + nginx ---
+      - name: Copy configs to gateway
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          source: "docker-compose.prod.yml,configs/"
+          target: ~/anomalies-browser/
+
+      - name: Deploy API on gateway
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u boredhero --password-stdin
+            docker pull ghcr.io/${{ github.repository }}:latest
+            cd ~/anomalies-browser
+            cp docker-compose.prod.yml docker-compose.yml
+            docker compose up -d --force-recreate anomalies-api autoheal
+            echo "[gateway] API deployed $(date)"
+
+      # --- Deploy infra on compute node (.111 via jumpbox) ---
+      - name: Ensure DB + Redis on compute node
+        uses: appleboy/ssh-action@v1
+        continue-on-error: true
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no noah@192.168.1.111 '
+              cd ~/magic-eyes-docker && docker compose up -d
+              echo "[compute] DB+Redis verified $(date)"
+            ' || echo "[compute] Unreachable — non-fatal, skipping"

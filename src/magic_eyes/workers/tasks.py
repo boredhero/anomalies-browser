@@ -36,12 +36,7 @@ def download_tile(self, source_name: str, tile_info_dict: dict, dest_dir: str):
 
 @app.task(bind=True, queue="process")
 def process_tile(self, tile_path: str, output_dir: str | None = None):
-    """Generate DEM and derivatives for a tile.
-
-    Args:
-        tile_path: path to LAZ/COPC file OR existing DEM GeoTIFF
-        output_dir: output directory (default: settings.processed_dir)
-    """
+    """Generate DEM and derivatives for a tile."""
     from magic_eyes.processing.pipeline import ProcessingPipeline
 
     self.update_state(state="PROGRESS", meta={"percent": 0, "message": "Starting processing"})
@@ -68,14 +63,72 @@ def process_tile(self, tile_path: str, output_dir: str | None = None):
 
 
 @app.task(bind=True, queue="detect")
-def run_detection(self, tile_id: str, pass_names: list, config: dict):
-    """Run classical detection passes on a processed tile."""
-    # TODO: implement in Phase 4
-    raise NotImplementedError
+def run_detection(self, dem_path: str, pass_names: list, config: dict):
+    """Run detection passes on a processed tile's DEM."""
+    from magic_eyes.detection.runner import PassRunner
+
+    self.update_state(state="PROGRESS", meta={"percent": 0, "message": "Running detection"})
+
+    runner = PassRunner(
+        pass_names=pass_names,
+        config=config,
+        weights=config.get("weights"),
+    )
+
+    candidates = runner.run_on_dem(Path(dem_path))
+
+    self.update_state(state="PROGRESS", meta={"percent": 100, "message": "Complete"})
+    return {
+        "num_detections": len(candidates),
+        "detections": [
+            {
+                "lon": c.geometry.x,
+                "lat": c.geometry.y,
+                "score": c.score,
+                "feature_type": c.feature_type.value,
+                "morphometrics": c.morphometrics,
+            }
+            for c in candidates
+        ],
+    }
 
 
 @app.task(bind=True, queue="gpu")
-def run_ml_pass(self, tile_id: str, pass_name: str, config: dict):
-    """Run a single ML-based detection pass (GPU required)."""
-    # TODO: implement in Phase 7
-    raise NotImplementedError
+def run_ml_pass(self, dem_path: str, pass_name: str, config: dict):
+    """Run a single ML detection pass (GPU queue)."""
+    from magic_eyes.detection.registry import PassRegistry
+    from magic_eyes.detection.base import PassInput
+    from magic_eyes.utils.raster_io import read_dem
+    import numpy as np
+
+    self.update_state(state="PROGRESS", meta={"percent": 0, "message": f"Running {pass_name}"})
+
+    dem, transform, crs = read_dem(Path(dem_path))
+
+    pass_cls = PassRegistry.get(pass_name)
+    detection_pass = pass_cls()
+
+    pass_input = PassInput(
+        dem=dem,
+        transform=transform,
+        crs=crs,
+        derivatives={},
+        config=config.get(f"passes.{pass_name}", {}),
+    )
+
+    candidates = detection_pass.run(pass_input)
+
+    self.update_state(state="PROGRESS", meta={"percent": 100, "message": "Complete"})
+    return {
+        "pass_name": pass_name,
+        "num_detections": len(candidates),
+        "detections": [
+            {
+                "lon": c.geometry.x,
+                "lat": c.geometry.y,
+                "score": c.score,
+                "feature_type": c.feature_type.value,
+            }
+            for c in candidates
+        ],
+    }

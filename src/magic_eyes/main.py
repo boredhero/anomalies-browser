@@ -58,9 +58,77 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     async def health():
-        return {"status": "ok", "version": "0.1.0"}
+        return {"status": "ok", "version": _load_info().get("version", "unknown")}
+
+    @app.get("/api/info")
+    async def info():
+        return _load_info()
+
+    # Serve built frontend as SPA
+    _mount_frontend(app)
 
     return app
+
+
+def _load_info() -> dict:
+    """Load info.yml for version display."""
+    from pathlib import Path
+
+    info_candidates = [
+        Path(__file__).parent.parent.parent / "info.yml",
+        Path("/app/info.yml"),
+    ]
+    for p in info_candidates:
+        if p.exists():
+            # Simple YAML-subset parser (key: value lines)
+            data = {}
+            for line in p.read_text().splitlines():
+                line = line.strip()
+                if ":" in line and not line.startswith("#"):
+                    key, _, val = line.partition(":")
+                    val = val.strip()
+                    # Try numeric conversion
+                    try:
+                        val = int(val)
+                    except (ValueError, TypeError):
+                        pass
+                    data[key.strip()] = val
+            return data
+    return {"version": "0.1.0", "name": "Magic Eyes"}
+
+
+def _mount_frontend(app: FastAPI) -> None:
+    """Mount built frontend static files with SPA fallback."""
+    from pathlib import Path
+    from fastapi.staticfiles import StaticFiles
+    from fastapi.responses import FileResponse
+
+    # Check for static dir (Docker) then frontend/dist (dev)
+    for candidate in [
+        Path(__file__).parent.parent.parent / "static",
+        Path(__file__).parent.parent.parent / "frontend" / "dist",
+    ]:
+        if (candidate / "index.html").exists():
+            static_dir = candidate
+            break
+    else:
+        return  # no frontend built
+
+    # Mount /assets for hashed JS/CSS bundles
+    assets_dir = static_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="static-assets")
+
+    # SPA catch-all: serve index.html for any non-API, non-asset route
+    index_path = str(static_dir / "index.html")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str):
+        # Serve actual static files if they exist
+        file_path = static_dir / full_path
+        if file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(index_path)
 
 
 app = create_app()

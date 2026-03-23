@@ -1,0 +1,9 @@
+name: Magic Eyes
+version: 0.1.0
+description: LiDAR-based terrain anomaly detection platform
+license: GPL-3.0-or-later
+repository: https://github.com/boredhero/anomalies-browser
+author: boredhero
+detection_passes: 11
+regions: 5
+validation_sites: 23

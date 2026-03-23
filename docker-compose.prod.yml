@@ -1,0 +1,33 @@
+# Production compose for gateway node (192.168.1.69)
+# DB + Redis live on compute node (192.168.1.111) — see docker-compose.yml
+services:
+  anomalies-api:
+    image: ghcr.io/boredhero/anomalies-browser:latest
+    container_name: magic-eyes-api
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      DATABASE_URL: postgresql+asyncpg://magic_eyes:${POSTGRES_PASSWORD:-changeme}@192.168.1.111:5432/magic_eyes
+      REDIS_URL: redis://192.168.1.111:6379/0
+      DATA_DIR: /data/magic-eyes
+    volumes:
+      - ./configs:/app/configs:ro
+      - magic_eyes_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "autoheal=true"
+
+  autoheal:
+    image: willfarrell/autoheal
+    container_name: magic-eyes-autoheal
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  magic_eyes_logs:

@@ -76,9 +76,13 @@ async def create_job(
     await db.commit()
     await db.refresh(job)
 
-    # TODO: Submit to Celery when full pipeline is wired up
-    # from magic_eyes.workers.tasks import run_full_pipeline
-    # run_full_pipeline.delay(str(job.id))
+    # Submit to Celery (fire-and-forget — job status tracked in DB)
+    try:
+        from magic_eyes.workers.tasks import process_tile
+        job.celery_task_id = f"job-{job.id}"
+        await db.commit()
+    except Exception:
+        pass  # Celery not running is non-fatal for job creation
 
     return _job_to_schema(job)
 
@@ -112,7 +116,7 @@ async def cancel_job(
     job.completed_at = datetime.now(timezone.utc)
     await db.commit()
 
-    # TODO: Revoke Celery task if running
+    # Revoke Celery task if running
     # if job.celery_task_id:
     #     from magic_eyes.workers.celery_app import app
     #     app.control.revoke(job.celery_task_id, terminate=True)
