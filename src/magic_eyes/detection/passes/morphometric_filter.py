@@ -1,13 +1,12 @@
-"""Morphometric filter pass — post-filter that enriches and filters candidates.
+"""Morphometric filter pass — enriches candidates with full morphometrics.
 
-Not a detector per se — it computes morphometric properties on candidates
-from other passes and removes those failing geometric criteria.
-Discriminators from literature: depth > 0.5m, area 100-4000 m²,
-circularity > 0.3 for sinkholes, depth-to-area ratio, k parameter.
+Consumes pre-computed fill_difference and slope derivatives.
+Never computes derivatives itself.
 """
 
 import numpy as np
 from scipy.ndimage import label as ndimage_label
+from shapely.geometry import Point
 
 from magic_eyes.detection.base import Candidate, DetectionPass, FeatureType, PassInput
 from magic_eyes.detection.postprocess.classification import classify_candidate
@@ -22,12 +21,10 @@ from magic_eyes.detection.postprocess.morphometrics import (
     compute_wall_slope,
 )
 from magic_eyes.detection.registry import register_pass
-from magic_eyes.processing.derivatives import compute_fill_difference, compute_slope
 
 
 @register_pass
 class MorphometricFilterPass(DetectionPass):
-    """Enrich candidates with morphometrics and filter by geometric criteria."""
 
     @property
     def name(self) -> str:
@@ -35,15 +32,13 @@ class MorphometricFilterPass(DetectionPass):
 
     @property
     def version(self) -> str:
-        return "0.1.0"
+        return "0.2.0"
 
     @property
     def required_derivatives(self) -> list[str]:
-        return ["slope"]
+        return ["fill_difference", "slope"]
 
     def run(self, input_data: PassInput) -> list[Candidate]:
-        """This pass operates on the DEM directly, finding depressions
-        and computing full morphometrics for each one."""
         config = input_data.config
         min_depth_m = config.get("min_depth_m", 0.3)
         max_area_m2 = config.get("max_area_m2", 4000.0)
@@ -53,16 +48,14 @@ class MorphometricFilterPass(DetectionPass):
         resolution = abs(input_data.transform[0])
         dem = input_data.dem
 
-        # Get fill-difference to find depressions
-        fill_diff = compute_fill_difference(dem)
+        fill_diff = input_data.derivatives.get("fill_difference")
+        slope = input_data.derivatives.get("slope")
+        if fill_diff is None or slope is None:
+            return []
 
-        # Get slope for wall slope computation
-        if "slope" in input_data.derivatives:
-            slope = input_data.derivatives["slope"]
-        else:
-            slope = compute_slope(dem, resolution)
+        # Mask nodata
+        fill_diff = np.where(np.isfinite(fill_diff) & (fill_diff < 1000), fill_diff, 0)
 
-        # Label depressions
         depression_mask = fill_diff > min_depth_m
         if not np.any(depression_mask):
             return []
@@ -73,7 +66,6 @@ class MorphometricFilterPass(DetectionPass):
         for i in range(1, num_features + 1):
             mask = labeled == i
 
-            # Compute all morphometrics
             depth = compute_depth(dem, mask)
             area = compute_area(mask, resolution)
             perimeter = compute_perimeter(mask, resolution)
@@ -83,7 +75,6 @@ class MorphometricFilterPass(DetectionPass):
             elongation = compute_elongation(mask)
             wall_slope_deg = compute_wall_slope(slope, mask)
 
-            # Filter by criteria
             if area < min_area_m2 or area > max_area_m2:
                 continue
             if circularity < min_circularity:
@@ -91,36 +82,25 @@ class MorphometricFilterPass(DetectionPass):
             if depth < min_depth_m:
                 continue
 
-            # Centroid
             rows, cols = np.where(mask)
             cy, cx = float(np.mean(rows)), float(np.mean(cols))
             geo_x, geo_y = input_data.transform * (cx, cy)
 
-            # Score based on multiple factors
             depth_score = min(depth / 5.0, 1.0)
-            circ_score = circularity
-            score = (depth_score + circ_score) / 2.0
-
-            from shapely.geometry import Point
+            score = (depth_score + circularity) / 2.0
 
             candidate = Candidate(
                 geometry=Point(geo_x, geo_y),
                 score=score,
                 feature_type=FeatureType.UNKNOWN,
                 morphometrics={
-                    "depth_m": depth,
-                    "area_m2": area,
-                    "perimeter_m": perimeter,
-                    "circularity": circularity,
-                    "volume_m3": volume,
-                    "k_parameter": k_param,
-                    "elongation": elongation,
+                    "depth_m": depth, "area_m2": area, "perimeter_m": perimeter,
+                    "circularity": circularity, "volume_m3": volume,
+                    "k_parameter": k_param, "elongation": elongation,
                     "wall_slope_deg": wall_slope_deg,
                     "depth_area_ratio": depth / area if area > 0 else 0,
                 },
             )
-
-            # Classify based on morphometrics
             candidate.feature_type = classify_candidate(candidate)
             candidates.append(candidate)
 

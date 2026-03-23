@@ -1,102 +1,69 @@
-"""Synthetic DEM generators for deterministic testing."""
+"""Synthetic DEM generators — writes real GeoTIFF files for native pipeline testing.
+
+Every test uses the same GDAL/WhiteboxTools pipeline as production.
+No numpy-only fallbacks.
+"""
+
+from pathlib import Path
 
 import numpy as np
+import rasterio
 from rasterio.transform import from_bounds
 
 from magic_eyes.detection.base import PassInput
 
 
-def make_flat_dem(
-    size: int = 200,
-    resolution: float = 1.0,
-    elevation: float = 500.0,
-) -> PassInput:
-    """Create a perfectly flat DEM."""
-    dem = np.full((size, size), elevation, dtype=np.float32)
-    transform = from_bounds(0, 0, size * resolution, size * resolution, size, size)
-    return PassInput(dem=dem, transform=transform, crs=32617, derivatives={})
+def write_geotiff(path: Path, dem: np.ndarray, resolution: float = 1.0) -> Path:
+    """Write a numpy array as a GeoTIFF."""
+    h, w = dem.shape
+    transform = from_bounds(0, 0, w * resolution, h * resolution, w, h)
+    with rasterio.open(
+        path, "w", driver="GTiff", height=h, width=w,
+        count=1, dtype="float32", crs="EPSG:32617", transform=transform,
+        compress="deflate",
+    ) as dst:
+        dst.write(dem.astype(np.float32), 1)
+    return path
 
 
-def make_slope_dem(
-    size: int = 200,
-    resolution: float = 1.0,
-    base_elevation: float = 500.0,
-    slope_deg: float = 10.0,
-) -> PassInput:
-    """Create a uniform slope DEM (tilted in Y direction)."""
-    y = np.arange(size, dtype=np.float32) * resolution
-    slope_rise = np.tan(np.radians(slope_deg)) * y
-    dem = np.tile(slope_rise[:, np.newaxis], (1, size)) + base_elevation
-    transform = from_bounds(0, 0, size * resolution, size * resolution, size, size)
-    return PassInput(dem=dem, transform=transform, crs=32617, derivatives={})
-
-
-def make_sinkhole_dem(
-    size: int = 200,
-    resolution: float = 1.0,
-    depth: float = 3.0,
-    radius: float = 15.0,
-    base_elevation: float = 500.0,
-    center: tuple[float, float] | None = None,
-) -> PassInput:
-    """Create a DEM with a single gaussian sinkhole.
-
-    Args:
-        size: grid dimensions (size x size pixels)
-        resolution: meters per pixel
-        depth: depth of sinkhole in meters
-        radius: gaussian sigma in meters
-        base_elevation: surrounding terrain elevation
-        center: (row, col) center in pixels, defaults to grid center
-    """
-    if center is None:
-        center = (size / 2.0, size / 2.0)
-
+def make_sinkhole_geotiff(tmpdir: Path, depth: float = 5.0, radius: float = 12.0, size: int = 200) -> Path:
+    """Create a GeoTIFF with a conical pit."""
+    dem = np.full((size, size), 500.0, dtype=np.float32)
     y, x = np.mgrid[0:size, 0:size].astype(np.float32)
-    cy, cx = center
-    dist_sq = (x - cx) ** 2 + (y - cy) ** 2
-    dem = base_elevation - depth * np.exp(-dist_sq / (2 * (radius / resolution) ** 2))
-    transform = from_bounds(0, 0, size * resolution, size * resolution, size, size)
-    return PassInput(dem=dem, transform=transform, crs=32617, derivatives={})
-
-
-def make_conical_pit_dem(
-    size: int = 200,
-    resolution: float = 1.0,
-    depth: float = 5.0,
-    radius: float = 10.0,
-    base_elevation: float = 500.0,
-) -> PassInput:
-    """Create a DEM with a conical pit (steep-walled, like a cave entrance)."""
-    y, x = np.mgrid[0:size, 0:size].astype(np.float32)
-    cx, cy = size / 2.0, size / 2.0
-    dist = np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * resolution
-    dem = np.full((size, size), base_elevation, dtype=np.float32)
+    dist = np.sqrt((x - size / 2) ** 2 + (y - size / 2) ** 2)
     pit_mask = dist < radius
-    dem[pit_mask] = base_elevation - depth * (1 - dist[pit_mask] / radius)
-    transform = from_bounds(0, 0, size * resolution, size * resolution, size, size)
-    return PassInput(dem=dem, transform=transform, crs=32617, derivatives={})
+    dem[pit_mask] = 500.0 - depth * (1 - dist[pit_mask] / radius)
+    return write_geotiff(tmpdir / "sinkhole_dem.tif", dem)
 
 
-def make_multi_depression_dem(
-    size: int = 400,
-    resolution: float = 1.0,
-    base_elevation: float = 500.0,
+def make_flat_geotiff(tmpdir: Path, size: int = 200) -> Path:
+    """Create a perfectly flat GeoTIFF."""
+    dem = np.full((size, size), 500.0, dtype=np.float32)
+    return write_geotiff(tmpdir / "flat_dem.tif", dem)
+
+
+def make_slope_geotiff(tmpdir: Path, slope_deg: float = 10.0, size: int = 200) -> Path:
+    """Create a uniform slope GeoTIFF."""
+    y = np.arange(size, dtype=np.float32)
+    slope_rise = np.tan(np.radians(slope_deg)) * y
+    dem = np.tile(slope_rise[:, np.newaxis], (1, size)) + 500.0
+    return write_geotiff(tmpdir / "slope_dem.tif", dem)
+
+
+def make_pass_input_from_geotiff(
+    dem_path: Path,
+    derivative_paths: dict[str, Path] | None = None,
 ) -> PassInput:
-    """Create a DEM with multiple depressions of varying sizes."""
-    dem = np.full((size, size), base_elevation, dtype=np.float32)
-    y, x = np.mgrid[0:size, 0:size].astype(np.float32)
+    """Load a GeoTIFF into a PassInput with derivatives loaded as arrays."""
+    with rasterio.open(dem_path) as src:
+        dem = src.read(1).astype(np.float32)
+        transform = src.transform
+        crs = src.crs.to_epsg() or 32617
 
-    depressions = [
-        (100, 100, 3.0, 20.0),  # (row, col, depth, radius)
-        (100, 300, 1.5, 10.0),
-        (300, 100, 5.0, 30.0),
-        (300, 300, 0.3, 8.0),   # too shallow for default threshold
-    ]
+    derivatives = {}
+    if derivative_paths:
+        for name, path in derivative_paths.items():
+            with rasterio.open(path) as src:
+                derivatives[name] = src.read(1).astype(np.float32)
 
-    for cy, cx, depth, radius in depressions:
-        dist_sq = (x - cx) ** 2 + (y - cy) ** 2
-        dem -= depth * np.exp(-dist_sq / (2 * (radius / resolution) ** 2))
-
-    transform = from_bounds(0, 0, size * resolution, size * resolution, size, size)
-    return PassInput(dem=dem, transform=transform, crs=32617, derivatives={})
+    return PassInput(dem=dem, transform=transform, crs=crs, derivatives=derivatives)

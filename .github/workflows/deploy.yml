@@ -74,9 +74,9 @@ jobs:
 
             ssh -o ConnectTimeout=15 -o StrictHostKeyChecking=no noah@192.168.1.111 "echo '${{ secrets.GHCR_TOKEN }}' | docker login ghcr.io -u boredhero --password-stdin && docker pull ghcr.io/boredhero/anomalies-browser:latest && cd ~/anomalies-browser && docker compose up -d --force-recreate --remove-orphans && docker compose ps"
 
-            sudo cp /tmp/anomalies-deploy/nginx/anomalies.martinospizza.dev /etc/nginx/sites-available/anomalies.martinospizza.dev
-            sudo ln -sf /etc/nginx/sites-available/anomalies.martinospizza.dev /etc/nginx/sites-enabled/
-            sudo nginx -t && sudo systemctl reload nginx
+            # nginx config managed by certbot — don't overwrite
+            # Only reload if config exists and is valid
+            sudo nginx -t && sudo systemctl reload nginx || true
 
             for i in 1 2 3 4 5 6; do
               curl -sf http://192.168.1.111:9747/api/health && echo " [deploy OK]" && break

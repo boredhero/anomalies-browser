@@ -12,7 +12,6 @@ import numpy as np
 from magic_eyes.config import settings
 from magic_eyes.detection.base import Candidate, DetectionPass, FeatureType, PassInput
 from magic_eyes.detection.registry import register_pass
-from magic_eyes.processing.derivatives import compute_hillshade
 
 # YOLO class index → our feature type
 YOLO_CLASS_MAP = {
@@ -73,7 +72,7 @@ class YOLODetectorPass(DetectionPass):
         # Get hillshade
         hs = input_data.derivatives.get("hillshade")
         if hs is None:
-            hs = compute_hillshade(input_data.dem, resolution)
+            return []
 
         # Convert to 3-channel uint8 image (YOLO expects RGB)
         hs_norm = np.clip(hs, 0, 255).astype(np.uint8)
