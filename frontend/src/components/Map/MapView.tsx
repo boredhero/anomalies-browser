@@ -12,8 +12,26 @@ import DrawControl from './DrawControl';
 import type { Basemap, Detection, GroundTruthSite } from '../../types';
 import { FEATURE_COLORS } from '../../types';
 
-const BASEMAP_STYLES: Record<Basemap, string> = {
-  satellite: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+const SATELLITE_STYLE = {
+  version: 8 as const,
+  sources: {
+    'esri-satellite': {
+      type: 'raster' as const,
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      maxzoom: 18,
+      attribution: 'Esri, Maxar, Earthstar Geographics',
+    },
+  },
+  layers: [{
+    id: 'satellite',
+    type: 'raster' as const,
+    source: 'esri-satellite',
+  }],
+};
+
+const BASEMAP_STYLES: Record<Basemap, string | object> = {
+  satellite: SATELLITE_STYLE,
   topo: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 };
@@ -129,12 +147,14 @@ export default function MapView() {
   return (
     <Map
       initialViewState={{
-        longitude: -79.0,
-        latitude: 40.5,
-        zoom: 7,
+        longitude: -79.71,
+        latitude: 39.80,
+        zoom: 13,
+        pitch: 45,
+        bearing: -15,
       }}
       style={{ width: '100%', height: '100%' }}
-      mapStyle={BASEMAP_STYLES[basemap]}
+      mapStyle={BASEMAP_STYLES[basemap] as any}
       onMoveEnd={handleMoveEnd}
       onLoad={(evt) => {
         const map = evt.target;
