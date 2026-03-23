@@ -82,7 +82,7 @@ export default function BottomDrawer() {
           <button
             onClick={() => bbox && setSearchBbox(bbox)}
             disabled={!bbox}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium px-6 py-3 rounded transition-colors"
+            className="inline-flex items-center gap-2 bg-cherry-500 hover:bg-cherry-400 disabled:opacity-50 text-white text-sm font-medium px-6 py-3 rounded transition-colors"
           >
             <Search size={16} /> Search this area
           </button>
@@ -95,7 +95,7 @@ export default function BottomDrawer() {
   if (isLoading || isFetching) {
     return (
       <div className="fixed bottom-0 inset-x-0 z-30 bg-slate-900/95 backdrop-blur-lg border-t border-slate-700 rounded-t p-5 text-center">
-        <Loader2 size={24} className="animate-spin text-blue-400 mx-auto mb-2" />
+        <Loader2 size={24} className="animate-spin text-amaranth-400 mx-auto mb-2" />
         <p className="text-sm text-slate-400">Searching for detections...</p>
       </div>
     );
@@ -157,7 +157,7 @@ export default function BottomDrawer() {
         <span className="text-sm font-semibold text-slate-400">{detections.length} detections</span>
         <button
           onClick={() => setDrawerState('expanded')}
-          className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1"
+          className="text-sm text-bordeaux-400 hover:text-bordeaux-300 flex items-center gap-1"
         >
           See all <ChevronUp size={14} />
         </button>

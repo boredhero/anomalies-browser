@@ -1,11 +1,92 @@
 @import "tailwindcss";
 
+/* Matte charcoal gray + pink accent theme */
+@theme {
+  /* Override slate → charcoal grays */
+  --color-slate-950: #111111;
+  --color-slate-900: #1A1A1A;
+  --color-slate-800: #2A2A2A;
+  --color-slate-700: #363636;
+  --color-slate-600: #444444;
+  --color-slate-500: #666666;
+  --color-slate-400: #888888;
+  --color-slate-300: #AAAAAA;
+  --color-slate-200: #CCCCCC;
+  --color-slate-100: #E0E0E0;
+  --color-slate-50: #F0F0F0;
+
+  /* Intense Cherry — primary action buttons */
+  --color-cherry-50: #fce9ec;
+  --color-cherry-100: #f8d3da;
+  --color-cherry-200: #f1a7b4;
+  --color-cherry-300: #ea7b8f;
+  --color-cherry-400: #e34f6a;
+  --color-cherry-500: #dd2245;
+  --color-cherry-600: #b01c37;
+  --color-cherry-700: #841529;
+  --color-cherry-800: #580e1b;
+  --color-cherry-900: #2c070e;
+  --color-cherry-950: #1f050a;
+
+  /* Burgundy — secondary actions, active states */
+  --color-burgundy-50: #fce9ed;
+  --color-burgundy-100: #f9d2db;
+  --color-burgundy-200: #f3a5b6;
+  --color-burgundy-300: #ed7892;
+  --color-burgundy-400: #e74b6d;
+  --color-burgundy-500: #e01f49;
+  --color-burgundy-600: #b4183a;
+  --color-burgundy-700: #87122c;
+  --color-burgundy-800: #5a0c1d;
+  --color-burgundy-900: #2d060f;
+  --color-burgundy-950: #1f040a;
+
+  /* Hot Fuchsia — highlights, progress bars, selected states */
+  --color-hotpink-50: #ffe5eb;
+  --color-hotpink-100: #ffccd6;
+  --color-hotpink-200: #ff99ad;
+  --color-hotpink-300: #ff6685;
+  --color-hotpink-400: #ff335c;
+  --color-hotpink-500: #ff0033;
+  --color-hotpink-600: #cc0029;
+  --color-hotpink-700: #99001f;
+  --color-hotpink-800: #660014;
+  --color-hotpink-900: #33000a;
+  --color-hotpink-950: #240007;
+
+  /* Night Bordeaux — links, subtle accents */
+  --color-bordeaux-50: #fce9ef;
+  --color-bordeaux-100: #f8d3df;
+  --color-bordeaux-200: #f2a6be;
+  --color-bordeaux-300: #eb7a9e;
+  --color-bordeaux-400: #e44e7d;
+  --color-bordeaux-500: #de215d;
+  --color-bordeaux-600: #b11b4a;
+  --color-bordeaux-700: #851438;
+  --color-bordeaux-800: #590d25;
+  --color-bordeaux-900: #2c0713;
+  --color-bordeaux-950: #1f050d;
+
+  /* Amaranth — notifications, badges, spinners */
+  --color-amaranth-50: #fce9ec;
+  --color-amaranth-100: #f9d2da;
+  --color-amaranth-200: #f3a5b5;
+  --color-amaranth-300: #ed7890;
+  --color-amaranth-400: #e74b6a;
+  --color-amaranth-500: #e01f45;
+  --color-amaranth-600: #b41837;
+  --color-amaranth-700: #87122a;
+  --color-amaranth-800: #5a0c1c;
+  --color-amaranth-900: #2d060e;
+  --color-amaranth-950: #1f040a;
+}
+
 :root {
   --sidebar-width: 440px;
-  --color-primary: #3b82f6;
+  --color-primary: #dd2245;
   --color-cave: #ef4444;
   --color-mine: #f97316;
-  --color-sinkhole: #3b82f6;
+  --color-sinkhole: #dd2245;
   --color-depression: #8b5cf6;
   --color-unknown: #6b7280;
 }
@@ -23,8 +104,8 @@ html, body, #root {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: #1A1A1A;
+  color: #CCCCCC;
   -webkit-font-smoothing: antialiased;
 }
 

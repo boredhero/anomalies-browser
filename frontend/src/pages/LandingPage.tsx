@@ -318,7 +318,7 @@ export default function LandingPage() {
           <button
             onClick={handleFindNearMe}
             disabled={geoLoading}
-            className="flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white font-semibold py-4 px-8 rounded text-lg transition-colors"
+            className="flex items-center justify-center gap-3 bg-cherry-500 hover:bg-cherry-400 disabled:opacity-60 text-white font-semibold py-4 px-8 rounded text-lg transition-colors"
           >
             {geoLoading ? <Loader2 size={22} className="animate-spin" /> : <Locate size={22} />}
             {geoLoading ? 'Getting location...' : 'Find a Hole Near Me'}
@@ -342,12 +342,12 @@ export default function LandingPage() {
                 value={zipCode}
                 onChange={(e) => { setZipCode(e.target.value.replace(/\D/g, '')); setZipError(null); }}
                 onKeyDown={(e) => e.key === 'Enter' && handleZipSubmit()}
-                className="flex-1 min-w-0 bg-slate-800 border-2 border-slate-600 text-white text-xl py-4 px-6 rounded focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-500"
+                className="flex-1 min-w-0 bg-slate-800 border-2 border-slate-600 text-white text-xl py-4 px-6 rounded focus:outline-none focus:border-cherry-500 transition-colors placeholder:text-slate-500"
               />
               <button
                 onClick={handleZipSubmit}
                 disabled={zipLoading || zipCode.length !== 5}
-                className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-4 px-10 rounded text-lg transition-colors flex-shrink-0"
+                className="bg-cherry-500 hover:bg-cherry-400 disabled:opacity-50 text-white font-semibold py-4 px-10 rounded text-lg transition-colors flex-shrink-0"
               >
                 {zipLoading ? <Loader2 size={22} className="animate-spin" /> : 'Go'}
               </button>

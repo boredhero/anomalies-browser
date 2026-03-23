@@ -37,7 +37,7 @@ export default function ResultsSplash({ detections, onDismiss, autoMs = 3000 }: 
       <div className="text-center px-8 animate-in fade-in zoom-in duration-500">
         <Sparkles size={48} className="text-yellow-400 mx-auto mb-4" />
         <h2 className="text-4xl font-black text-white mb-3">
-          Found <span className="text-blue-400">{detections.length}</span> potential features!
+          Found <span className="text-hotpink-400">{detections.length}</span> potential features!
         </h2>
         {topTypes && (
           <p className="text-lg text-slate-400 mb-6">

@@ -168,7 +168,7 @@ function CommentsSection({ detectionId }: { detectionId: string }) {
           placeholder="Add comment..." className="flex-1 bg-slate-800 border border-slate-600 rounded text-sm py-3 px-3 text-slate-200"
           onKeyDown={(e) => e.key === 'Enter' && text && addComment.mutate()} />
         <button onClick={() => text && addComment.mutate()} disabled={!text}
-          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-3 rounded flex-shrink-0">
+          className="bg-burgundy-500 hover:bg-burgundy-400 disabled:opacity-50 text-white px-4 py-3 rounded flex-shrink-0">
           <Send size={16} />
         </button>
       </div>

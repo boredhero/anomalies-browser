@@ -33,22 +33,22 @@ export default function JobPanel() {
       {/* Active jobs — always visible at top */}
       {activeJobs.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold uppercase tracking-wider text-blue-400 mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-amaranth-400 mb-3 flex items-center gap-2">
             <Loader2 size={16} className="animate-spin" /> Active ({activeJobs.length})
           </h3>
           <div className="flex flex-col gap-3">
             {activeJobs.map((job: Job) => (
-              <div key={job.id} className="bg-blue-950/50 border border-blue-800 rounded p-4">
+              <div key={job.id} className="bg-amaranth-950/50 border border-amaranth-800 rounded p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-blue-200 font-medium">{job.job_type.replace(/_/g, ' ')}</span>
+                  <span className="text-sm text-amaranth-200 font-medium">{job.job_type.replace(/_/g, ' ')}</span>
                   <StatusBadge status={job.status} />
                 </div>
                 <div className="h-3 bg-slate-700 rounded overflow-hidden mb-2">
-                  <div className="h-full bg-blue-500 rounded transition-all duration-500 ease-out"
+                  <div className="h-full bg-hotpink-500 rounded transition-all duration-500 ease-out"
                     style={{ width: `${Math.max(job.progress, 2)}%` }} />
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-mono text-blue-300">{job.progress.toFixed(0)}%</span>
+                  <span className="text-sm font-mono text-amaranth-300">{job.progress.toFixed(0)}%</span>
                   <button onClick={() => cancelJob.mutate(job.id)}
                     className="text-red-400 hover:text-red-300 text-sm flex items-center gap-1">
                     <X size={14} /> Cancel
@@ -66,15 +66,15 @@ export default function JobPanel() {
 
         <div className="flex gap-2 mb-4">
           <button onClick={() => { setInputMode('region'); setDrawingAOI(false); }}
-            className={`flex-1 text-sm py-3 px-3 rounded font-medium transition-colors ${inputMode === 'region' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
+            className={`flex-1 text-sm py-3 px-3 rounded font-medium transition-colors ${inputMode === 'region' ? 'bg-burgundy-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
             Region
           </button>
           <button onClick={() => { setInputMode('pin'); setDrawingAOI(false); }}
-            className={`flex-1 text-sm py-3 px-3 rounded font-medium flex items-center justify-center gap-1.5 transition-colors ${inputMode === 'pin' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
+            className={`flex-1 text-sm py-3 px-3 rounded font-medium flex items-center justify-center gap-1.5 transition-colors ${inputMode === 'pin' ? 'bg-burgundy-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
             <MapPin size={14} /> Pin
           </button>
           <button onClick={() => { setInputMode('draw'); setDrawingAOI(true); }}
-            className={`flex-1 text-sm py-3 px-3 rounded font-medium flex items-center justify-center gap-1.5 transition-colors ${inputMode === 'draw' ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
+            className={`flex-1 text-sm py-3 px-3 rounded font-medium flex items-center justify-center gap-1.5 transition-colors ${inputMode === 'draw' ? 'bg-burgundy-500 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}>
             <PenTool size={14} /> Draw
           </button>
         </div>
@@ -97,7 +97,7 @@ export default function JobPanel() {
               <span className="text-sm text-slate-400 whitespace-nowrap">Radius: {pinRadius} km</span>
               <input type="range" min={0.5} max={10} step={0.5} value={pinRadius}
                 onChange={(e) => setPinRadius(parseFloat(e.target.value))}
-                className="flex-1 accent-blue-500 h-2" />
+                className="flex-1 accent-cherry-500 h-2" />
             </div>
           </div>
         )}
@@ -132,7 +132,7 @@ export default function JobPanel() {
             setDrawingAOI(false);
           }}
           disabled={createJob.isPending || (inputMode === 'draw' && !drawnAOI) || (inputMode === 'pin' && (!pinLat || !pinLon))}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-medium py-3.5 px-4 rounded transition-colors">
+          className="w-full flex items-center justify-center gap-2 bg-cherry-500 hover:bg-cherry-400 disabled:opacity-50 text-white text-sm font-medium py-3.5 px-4 rounded transition-colors">
           {createJob.isPending ? <Loader2 size={18} className="animate-spin" /> : <Play size={18} />}
           Submit Job
         </button>
@@ -175,7 +175,7 @@ export default function JobPanel() {
 function StatusBadge({ status }: { status: string }) {
   const config: Record<string, { bg: string; icon: any }> = {
     PENDING: { bg: 'bg-yellow-900/50 text-yellow-300 border-yellow-700', icon: Clock },
-    RUNNING: { bg: 'bg-blue-900/50 text-blue-300 border-blue-700', icon: Loader2 },
+    RUNNING: { bg: 'bg-amaranth-900/50 text-amaranth-300 border-amaranth-700', icon: Loader2 },
     COMPLETED: { bg: 'bg-green-900/50 text-green-300 border-green-700', icon: CheckCircle2 },
     FAILED: { bg: 'bg-red-900/50 text-red-300 border-red-700', icon: AlertCircle },
     CANCELLED: { bg: 'bg-slate-800 text-slate-400 border-slate-600', icon: Ban },

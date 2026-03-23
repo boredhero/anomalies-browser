@@ -24,7 +24,7 @@ export default function DetectionCard({ detection: d, compact, userLocation, sel
       <button
         onClick={onClick}
         className={`flex-shrink-0 w-60 snap-start rounded p-4 text-left transition-all ${
-          selected ? 'bg-slate-700 ring-2 ring-blue-500' : 'bg-slate-800 hover:bg-slate-750'
+          selected ? 'bg-slate-700 ring-2 ring-hotpink-500' : 'bg-slate-800 hover:bg-slate-750'
         }`}
       >
         <div className="flex items-center gap-2 mb-2">
@@ -46,7 +46,7 @@ export default function DetectionCard({ detection: d, compact, userLocation, sel
   return (
     <div
       className={`rounded p-4 transition-all ${
-        selected ? 'bg-slate-700 ring-2 ring-blue-500' : 'bg-slate-800'
+        selected ? 'bg-slate-700 ring-2 ring-hotpink-500' : 'bg-slate-800'
       }`}
     >
       {/* Header */}
@@ -97,7 +97,7 @@ export default function DetectionCard({ detection: d, compact, userLocation, sel
           href={mapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="ml-auto flex items-center gap-1 bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded transition-colors"
+          className="ml-auto flex items-center gap-1 bg-cherry-500 hover:bg-cherry-400 text-white px-3 py-1.5 rounded transition-colors"
         >
           <ExternalLink size={11} />
           Open in Maps
