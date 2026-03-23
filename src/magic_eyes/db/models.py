@@ -28,7 +28,7 @@ class Base(DeclarativeBase):
 # --- Enums ---
 
 
-class DataSourceEnum(str, enum.Enum):
+class DataSourceEnum(enum.StrEnum):
     USGS_3DEP = "usgs_3dep"
     PASDA = "pasda"
     WV = "wv"
@@ -36,7 +36,7 @@ class DataSourceEnum(str, enum.Enum):
     OH = "oh"
 
 
-class TileStatus(str, enum.Enum):
+class TileStatus(enum.StrEnum):
     DISCOVERED = "discovered"
     DOWNLOADING = "downloading"
     DOWNLOADED = "downloaded"
@@ -45,7 +45,7 @@ class TileStatus(str, enum.Enum):
     ERROR = "error"
 
 
-class FeatureType(str, enum.Enum):
+class FeatureType(enum.StrEnum):
     SINKHOLE = "sinkhole"
     CAVE_ENTRANCE = "cave_entrance"
     MINE_PORTAL = "mine_portal"
@@ -55,14 +55,14 @@ class FeatureType(str, enum.Enum):
     UNKNOWN = "unknown"
 
 
-class JobType(str, enum.Enum):
+class JobType(enum.StrEnum):
     INGEST = "ingest"
     PROCESS = "process"
     DETECT = "detect"
     FULL_PIPELINE = "full_pipeline"
 
 
-class JobStatus(str, enum.Enum):
+class JobStatus(enum.StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -70,7 +70,7 @@ class JobStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
-class GroundTruthSource(str, enum.Enum):
+class GroundTruthSource(enum.StrEnum):
     MANUAL = "manual"
     PASDA_KARST = "pasda_karst"
     PA_AML = "pa_aml"
@@ -79,7 +79,7 @@ class GroundTruthSource(str, enum.Enum):
     OHIO_EPA = "ohio_epa"
 
 
-class ValidationVerdict(str, enum.Enum):
+class ValidationVerdict(enum.StrEnum):
     CONFIRMED = "confirmed"
     REJECTED = "rejected"
     UNCERTAIN = "uncertain"

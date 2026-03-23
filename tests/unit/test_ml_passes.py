@@ -8,12 +8,22 @@ import pytest
 from rasterio.transform import from_bounds
 
 from magic_eyes.detection.base import PassInput
-from magic_eyes.detection.passes.random_forest import RandomForestPass, extract_features, FEATURE_NAMES
-from magic_eyes.detection.passes.unet_segmentation import UNetSegmentationPass, _prepare_input_tensor
+from magic_eyes.detection.passes.random_forest import (
+    FEATURE_NAMES,
+    RandomForestPass,
+    extract_features,
+)
+from magic_eyes.detection.passes.unet_segmentation import (
+    UNetSegmentationPass,
+    _prepare_input_tensor,
+)
 from magic_eyes.detection.passes.yolo_detector import YOLODetectorPass
 from magic_eyes.detection.registry import PassRegistry
-from magic_eyes.ml.training import extract_rf_training_data, train_random_forest, extract_unet_patches
-
+from magic_eyes.ml.training import (
+    extract_rf_training_data,
+    extract_unet_patches,
+    train_random_forest,
+)
 
 # --- Helpers ---
 
@@ -47,7 +57,7 @@ class TestMLPassesRegistered:
 
 class TestFeatureExtraction:
     def test_extract_10_features(self):
-        from magic_eyes.processing.derivatives import compute_slope, compute_tpi, compute_svf
+        from magic_eyes.processing.derivatives import compute_slope, compute_svf, compute_tpi
 
         dem = _make_test_dem()
         mask = _make_test_mask()
@@ -60,7 +70,7 @@ class TestFeatureExtraction:
         assert len(FEATURE_NAMES) == 10
 
     def test_features_are_finite(self):
-        from magic_eyes.processing.derivatives import compute_slope, compute_tpi, compute_svf
+        from magic_eyes.processing.derivatives import compute_slope, compute_svf, compute_tpi
 
         dem = _make_test_dem()
         mask = _make_test_mask()
@@ -72,7 +82,7 @@ class TestFeatureExtraction:
         assert np.all(np.isfinite(features))
 
     def test_depth_feature_positive(self):
-        from magic_eyes.processing.derivatives import compute_slope, compute_tpi, compute_svf
+        from magic_eyes.processing.derivatives import compute_slope, compute_svf, compute_tpi
 
         dem = _make_test_dem()
         mask = _make_test_mask()
@@ -183,6 +193,7 @@ class TestUNetArchitecture:
         """Verify U-Net can be instantiated (doesn't require GPU)."""
         try:
             import torch
+
             from magic_eyes.detection.passes.unet_segmentation import _build_unet
 
             UNet = _build_unet()

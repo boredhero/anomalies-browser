@@ -35,14 +35,14 @@ def create_app() -> FastAPI:
 
     # Register all routes
     from magic_eyes.api.routes import (
-        detections,
-        jobs,
         datasets,
-        regions,
-        validation,
+        detections,
         exports,
-        tiles,
+        jobs,
         raster_tiles,
+        regions,
+        tiles,
+        validation,
         websocket,
     )
 
@@ -100,8 +100,9 @@ def _load_info() -> dict:
 def _mount_frontend(app: FastAPI) -> None:
     """Mount built frontend static files with SPA fallback."""
     from pathlib import Path
-    from fastapi.staticfiles import StaticFiles
+
     from fastapi.responses import FileResponse
+    from fastapi.staticfiles import StaticFiles
 
     # Check for static dir (Docker) then frontend/dist (dev)
     for candidate in [

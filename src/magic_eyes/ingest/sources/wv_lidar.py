@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 import httpx
-from shapely.geometry import Polygon, box
+from shapely.geometry import Polygon
 
 from magic_eyes.ingest.sources.base import DataSource, TileInfo
 from magic_eyes.utils.logging import log

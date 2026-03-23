@@ -5,12 +5,11 @@ Microsoft Planetary Computer STAC catalog for 3DEP COPC tiles, then
 downloads them via HTTP (or S3 with --no-sign-request).
 """
 
-import asyncio
 from collections.abc import AsyncIterator
 from pathlib import Path
 
 import httpx
-from shapely.geometry import Polygon, box, mapping, shape
+from shapely.geometry import Polygon, shape
 
 from magic_eyes.ingest.sources.base import DataSource, TileInfo
 from magic_eyes.utils.logging import log
@@ -127,7 +126,7 @@ class USGS3DEPSource(DataSource):
         async with httpx.AsyncClient(timeout=300.0, follow_redirects=True) as client:
             async with client.stream("GET", tile.url) as response:
                 response.raise_for_status()
-                total = int(response.headers.get("content-length", 0))
+                int(response.headers.get("content-length", 0))
 
                 with open(dest_path, "wb") as f:
                     downloaded = 0

@@ -4,7 +4,6 @@ These tests use a mocked database to avoid requiring PostGIS.
 They verify route structure, request validation, and response schemas.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient

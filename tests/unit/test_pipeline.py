@@ -5,17 +5,16 @@ from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
-import pytest
 import rasterio
 from rasterio.transform import from_bounds
 from shapely.geometry import box
 
 from magic_eyes.processing.pipeline import ProcessingPipeline
-from magic_eyes.processing.tile_manager import ManagedTile, TileManager
 from magic_eyes.processing.point_cloud import (
     compute_multi_return_ratio,
     compute_point_density,
 )
+from magic_eyes.processing.tile_manager import ManagedTile, TileManager
 
 
 def _write_test_dem(path: Path, size: int = 100, depression: bool = True) -> None:

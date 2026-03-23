@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import numpy as np
@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from shapely.geometry import Point, Polygon
 
 
-class FeatureType(str, Enum):
+class FeatureType(StrEnum):
     SINKHOLE = "sinkhole"
     CAVE_ENTRANCE = "cave_entrance"
     MINE_PORTAL = "mine_portal"

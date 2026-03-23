@@ -1,9 +1,9 @@
 """Spatial clustering utilities for detection candidates."""
 
 import numpy as np
-from scipy.ndimage import label as ndimage_label
 from numpy.typing import NDArray
-from shapely.geometry import Point, Polygon
+from scipy.ndimage import label as ndimage_label
+from shapely.geometry import Point
 
 from magic_eyes.detection.base import Candidate, FeatureType
 

@@ -75,7 +75,7 @@ def compute_multi_return_ratio(
 
     x_filt = x[mask]
     y_filt = y[mask]
-    rn_filt = return_number[mask]
+    return_number[mask]
     nr_filt = number_of_returns[mask]
 
     if bounds is None:

@@ -1,7 +1,7 @@
 """Progress reporting callbacks for Celery tasks."""
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from magic_eyes.db.engine import async_session_factory
 from magic_eyes.db.models import Job
@@ -17,7 +17,7 @@ async def _update_progress(job_id: str, percent: float, message: str) -> None:
             if percent >= 100:
                 from magic_eyes.db.models import JobStatus
                 job.status = JobStatus.COMPLETED
-                job.completed_at = datetime.now(timezone.utc)
+                job.completed_at = datetime.now(UTC)
             await session.commit()
 
 

@@ -101,9 +101,9 @@ def train_random_forest(
 
     Returns dict with training metrics.
     """
+    import joblib
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.model_selection import cross_val_score
-    import joblib
 
     clf = RandomForestClassifier(
         n_estimators=n_estimators,

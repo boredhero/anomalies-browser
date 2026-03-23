@@ -7,12 +7,12 @@ per Zhu et al. (2020).
 Works on CPU — no GPU required.
 """
 
-import json
 from pathlib import Path
 
 import numpy as np
 from scipy.ndimage import label as ndimage_label
 
+from magic_eyes.config import settings
 from magic_eyes.detection.base import Candidate, DetectionPass, FeatureType, PassInput
 from magic_eyes.detection.postprocess.morphometrics import (
     compute_area,
@@ -20,12 +20,14 @@ from magic_eyes.detection.postprocess.morphometrics import (
     compute_depth,
     compute_elongation,
     compute_perimeter,
-    compute_volume,
-    compute_wall_slope,
 )
 from magic_eyes.detection.registry import register_pass
-from magic_eyes.processing.derivatives import compute_fill_difference, compute_slope, compute_tpi, compute_svf
-from magic_eyes.config import settings
+from magic_eyes.processing.derivatives import (
+    compute_fill_difference,
+    compute_slope,
+    compute_svf,
+    compute_tpi,
+)
 
 
 def extract_features(

@@ -4,11 +4,9 @@ These tiles are pre-rendered GeoTIFFs sliced into 256x256 PNG tiles
 for use as MapLibre raster layers.
 """
 
-import io
 import math
-from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter
 from fastapi.responses import Response
 
 from magic_eyes.config import settings

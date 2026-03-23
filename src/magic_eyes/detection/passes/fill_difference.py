@@ -7,7 +7,6 @@ import numpy as np
 from scipy.ndimage import label as ndimage_label
 
 from magic_eyes.detection.base import Candidate, DetectionPass, FeatureType, PassInput
-from magic_eyes.detection.postprocess.clustering import extract_candidates_from_labels
 from magic_eyes.detection.registry import register_pass
 
 

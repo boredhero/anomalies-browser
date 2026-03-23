@@ -9,7 +9,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from magic_eyes.api.deps import get_db
-from magic_eyes.api.schemas import GroundTruthCreate, GroundTruthSiteOut, ValidationRequest, ValidationResponse
+from magic_eyes.api.schemas import (
+    GroundTruthCreate,
+    GroundTruthSiteOut,
+    ValidationRequest,
+    ValidationResponse,
+)
 from magic_eyes.db.models import (
     Detection,
     FeatureType,

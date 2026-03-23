@@ -5,7 +5,6 @@ import json
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from magic_eyes.db.engine import async_session_factory
 from magic_eyes.db.models import Job
@@ -74,7 +73,7 @@ async def job_progress_ws(websocket: WebSocket):
                 msg = json.loads(data)
                 if "ping" in msg:
                     await websocket.send_json({"type": "pong"})
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass  # normal — poll loop continues
 
     except WebSocketDisconnect:

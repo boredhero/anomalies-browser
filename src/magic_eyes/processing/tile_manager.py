@@ -9,7 +9,7 @@ from pathlib import Path
 from uuid import UUID
 
 from rtree import index as rtree_index
-from shapely.geometry import Polygon, box
+from shapely.geometry import Polygon
 
 
 @dataclass

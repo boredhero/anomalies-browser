@@ -5,18 +5,25 @@ from pathlib import Path
 
 import pytest
 
-from magic_eyes.detection.registry import PassRegistry
-
 
 @pytest.fixture(autouse=True)
 def ensure_passes_registered():
     """Ensure all passes are registered before each test."""
     import importlib
+
     import magic_eyes.detection.passes as passes_mod
     from magic_eyes.detection.passes import (
-        fill_difference, local_relief_model, curvature,
-        sky_view_factor, tpi, point_density, multi_return,
-        morphometric_filter, random_forest, unet_segmentation, yolo_detector,
+        curvature,
+        fill_difference,
+        local_relief_model,
+        morphometric_filter,
+        multi_return,
+        point_density,
+        random_forest,
+        sky_view_factor,
+        tpi,
+        unet_segmentation,
+        yolo_detector,
     )
 
     # Force re-registration if registry was cleared

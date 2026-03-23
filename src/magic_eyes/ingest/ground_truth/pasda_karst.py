@@ -14,7 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from magic_eyes.db.models import FeatureType, GroundTruthSite, GroundTruthSource
 from magic_eyes.utils.logging import log
 
-
 # Mapping from PASDA feature type codes to our enum
 PASDA_TYPE_MAP = {
     "SINKHOLE": FeatureType.SINKHOLE,

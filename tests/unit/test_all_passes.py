@@ -3,27 +3,22 @@
 from pathlib import Path
 
 import numpy as np
-import pytest
 from rasterio.transform import from_bounds
 
 from magic_eyes.detection.base import FeatureType, PassInput
-from magic_eyes.detection.passes.local_relief_model import LocalReliefModelPass
 from magic_eyes.detection.passes.curvature import CurvaturePass
+from magic_eyes.detection.passes.local_relief_model import LocalReliefModelPass
+from magic_eyes.detection.passes.morphometric_filter import MorphometricFilterPass
+from magic_eyes.detection.passes.multi_return import MultiReturnPass
+from magic_eyes.detection.passes.point_density import PointDensityPass
 from magic_eyes.detection.passes.sky_view_factor import SkyViewFactorPass
 from magic_eyes.detection.passes.tpi import TPIPass
-from magic_eyes.detection.passes.morphometric_filter import MorphometricFilterPass
-from magic_eyes.detection.passes.point_density import PointDensityPass
-from magic_eyes.detection.passes.multi_return import MultiReturnPass
 from magic_eyes.detection.registry import PassRegistry
 from magic_eyes.detection.runner import PassRunner
-
 from tests.fixtures.synthetic_dem import (
-    make_conical_pit_dem,
     make_flat_dem,
-    make_sinkhole_dem,
     make_slope_dem,
 )
-
 
 # --- Helpers ---
 

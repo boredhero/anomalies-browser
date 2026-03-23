@@ -8,7 +8,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from magic_eyes.api.deps import get_db
-from magic_eyes.api.schemas import DetectionCollection, DetectionDetail, DetectionFeature, DetectionProperties
+from magic_eyes.api.schemas import (
+    DetectionCollection,
+    DetectionDetail,
+    DetectionFeature,
+    DetectionProperties,
+)
 from magic_eyes.db.models import Detection, FeatureType, PassResult, ValidationEvent
 
 router = APIRouter(tags=["detections"])

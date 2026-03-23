@@ -1,7 +1,6 @@
 """Synthetic DEM generators for deterministic testing."""
 
 import numpy as np
-from numpy.typing import NDArray
 from rasterio.transform import from_bounds
 
 from magic_eyes.detection.base import PassInput

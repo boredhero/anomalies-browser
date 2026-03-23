@@ -2,19 +2,16 @@
 
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
 
 import pytest
-from shapely.geometry import box
 
-from magic_eyes.ingest.sources.base import TileInfo
-from magic_eyes.ingest.sources.usgs_3dep import USGS3DEPSource
 from magic_eyes.ingest.manager import (
     SOURCE_REGISTRY,
     get_source,
     get_sources_for_region,
     load_region_bbox,
 )
+from magic_eyes.ingest.sources.usgs_3dep import USGS3DEPSource
 
 
 class TestSourceRegistry:

@@ -1,17 +1,16 @@
 """IngestManager — orchestrates tile discovery and download across data sources."""
 
 from pathlib import Path
-from typing import Any
 
 from shapely.geometry import Polygon, shape
 
 from magic_eyes.config import settings
 from magic_eyes.ingest.sources.base import DataSource, TileInfo
-from magic_eyes.ingest.sources.usgs_3dep import USGS3DEPSource
-from magic_eyes.ingest.sources.pasda import PASDASource
-from magic_eyes.ingest.sources.wv_lidar import WVLidarSource
 from magic_eyes.ingest.sources.ny_lidar import NYLidarSource
 from magic_eyes.ingest.sources.oh_ogrip import OHOGRIPSource
+from magic_eyes.ingest.sources.pasda import PASDASource
+from magic_eyes.ingest.sources.usgs_3dep import USGS3DEPSource
+from magic_eyes.ingest.sources.wv_lidar import WVLidarSource
 from magic_eyes.utils.logging import log
 
 # Registry of all available data sources

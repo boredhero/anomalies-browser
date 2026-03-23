@@ -2,17 +2,19 @@
 
 from pathlib import Path
 
-from magic_eyes.workers.celery_app import app
 from magic_eyes.config import settings
+from magic_eyes.workers.celery_app import app
 
 
 @app.task(bind=True, queue="ingest", max_retries=3)
 def download_tile(self, source_name: str, tile_info_dict: dict, dest_dir: str):
     """Download a single LiDAR tile from the given source."""
     import asyncio
+
+    from shapely.geometry import shape
+
     from magic_eyes.ingest.manager import get_source
     from magic_eyes.ingest.sources.base import TileInfo
-    from shapely.geometry import shape
 
     self.update_state(state="PROGRESS", meta={"percent": 0, "message": "Starting download"})
 
@@ -96,10 +98,10 @@ def run_detection(self, dem_path: str, pass_names: list, config: dict):
 @app.task(bind=True, queue="gpu")
 def run_ml_pass(self, dem_path: str, pass_name: str, config: dict):
     """Run a single ML detection pass (GPU queue)."""
-    from magic_eyes.detection.registry import PassRegistry
+
     from magic_eyes.detection.base import PassInput
+    from magic_eyes.detection.registry import PassRegistry
     from magic_eyes.utils.raster_io import read_dem
-    import numpy as np
 
     self.update_state(state="PROGRESS", meta={"percent": 0, "message": f"Running {pass_name}"})
 

@@ -2,11 +2,11 @@
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from magic_eyes.ingest.ground_truth.pasda_karst import load_pasda_karst
-from magic_eyes.ingest.ground_truth.pa_aml import load_pa_aml
-from magic_eyes.ingest.ground_truth.usgs_ny_karst import load_usgs_ny_karst
-from magic_eyes.ingest.ground_truth.usgs_national import load_usgs_national
 from magic_eyes.ingest.ground_truth.ohio_karst import load_ohio_karst
+from magic_eyes.ingest.ground_truth.pa_aml import load_pa_aml
+from magic_eyes.ingest.ground_truth.pasda_karst import load_pasda_karst
+from magic_eyes.ingest.ground_truth.usgs_national import load_usgs_national
+from magic_eyes.ingest.ground_truth.usgs_ny_karst import load_usgs_ny_karst
 from magic_eyes.utils.logging import log
 
 

@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 from scipy.ndimage import label as ndimage_label
 
+from magic_eyes.config import settings
 from magic_eyes.detection.base import Candidate, DetectionPass, FeatureType, PassInput
 from magic_eyes.detection.registry import register_pass
 from magic_eyes.processing.derivatives import (
@@ -22,7 +23,6 @@ from magic_eyes.processing.derivatives import (
     compute_svf,
     compute_tpi,
 )
-from magic_eyes.config import settings
 
 
 def _build_unet():

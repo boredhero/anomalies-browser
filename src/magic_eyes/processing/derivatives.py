@@ -13,7 +13,7 @@ References:
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.ndimage import uniform_filter, generic_filter
+from scipy.ndimage import uniform_filter
 
 
 def compute_hillshade(

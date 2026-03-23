@@ -1,8 +1,7 @@
 """Job submission, status, and management endpoints."""
 
 import uuid
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -10,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from magic_eyes.api.deps import get_db
 from magic_eyes.api.schemas import JobCreate, JobList, JobStatus
-from magic_eyes.db.models import Job, JobStatus as JobStatusEnum, JobType
+from magic_eyes.db.models import Job, JobType
+from magic_eyes.db.models import JobStatus as JobStatusEnum
 
 router = APIRouter(tags=["jobs"])
 
@@ -78,7 +78,6 @@ async def create_job(
 
     # Submit to Celery (fire-and-forget — job status tracked in DB)
     try:
-        from magic_eyes.workers.tasks import process_tile
         job.celery_task_id = f"job-{job.id}"
         await db.commit()
     except Exception:
@@ -113,7 +112,7 @@ async def cancel_job(
         raise HTTPException(status_code=400, detail=f"Cannot cancel job in state {job.status.value}")
 
     job.status = JobStatusEnum.CANCELLED
-    job.completed_at = datetime.now(timezone.utc)
+    job.completed_at = datetime.now(UTC)
     await db.commit()
 
     # Revoke Celery task if running

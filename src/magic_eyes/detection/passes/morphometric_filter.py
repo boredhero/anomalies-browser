@@ -10,6 +10,7 @@ import numpy as np
 from scipy.ndimage import label as ndimage_label
 
 from magic_eyes.detection.base import Candidate, DetectionPass, FeatureType, PassInput
+from magic_eyes.detection.postprocess.classification import classify_candidate
 from magic_eyes.detection.postprocess.morphometrics import (
     compute_area,
     compute_circularity,
@@ -20,7 +21,6 @@ from magic_eyes.detection.postprocess.morphometrics import (
     compute_volume,
     compute_wall_slope,
 )
-from magic_eyes.detection.postprocess.classification import classify_candidate
 from magic_eyes.detection.registry import register_pass
 from magic_eyes.processing.derivatives import compute_fill_difference, compute_slope
 

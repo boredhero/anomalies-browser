@@ -1,6 +1,5 @@
 """Detection pass registry with auto-registration decorator."""
 
-from typing import Type
 
 from magic_eyes.detection.base import DetectionPass
 
@@ -9,7 +8,7 @@ class PassRegistry:
     """Singleton registry for detection passes."""
 
     _instance: "PassRegistry | None" = None
-    _passes: dict[str, Type[DetectionPass]] = {}
+    _passes: dict[str, type[DetectionPass]] = {}
 
     def __new__(cls) -> "PassRegistry":
         if cls._instance is None:
@@ -17,14 +16,14 @@ class PassRegistry:
         return cls._instance
 
     @classmethod
-    def register(cls, pass_class: Type[DetectionPass]) -> Type[DetectionPass]:
+    def register(cls, pass_class: type[DetectionPass]) -> type[DetectionPass]:
         """Register a detection pass class."""
         instance = pass_class()
         cls._passes[instance.name] = pass_class
         return pass_class
 
     @classmethod
-    def get(cls, name: str) -> Type[DetectionPass]:
+    def get(cls, name: str) -> type[DetectionPass]:
         """Get a registered pass class by name."""
         if name not in cls._passes:
             available = list(cls._passes.keys())
@@ -32,7 +31,7 @@ class PassRegistry:
         return cls._passes[name]
 
     @classmethod
-    def list_passes(cls) -> dict[str, Type[DetectionPass]]:
+    def list_passes(cls) -> dict[str, type[DetectionPass]]:
         """Return all registered passes."""
         return dict(cls._passes)
 
@@ -47,6 +46,6 @@ class PassRegistry:
         cls._passes.clear()
 
 
-def register_pass(cls: Type[DetectionPass]) -> Type[DetectionPass]:
+def register_pass(cls: type[DetectionPass]) -> type[DetectionPass]:
     """Decorator to register a detection pass at import time."""
     return PassRegistry.register(cls)
