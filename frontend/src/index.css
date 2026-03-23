@@ -45,6 +45,17 @@ html, body, #root {
   html { font-size: 22px; }
 }
 
+/* Widen sidebar on larger screens */
+@media (min-width: 1440px) {
+  :root { --sidebar-width: 480px; }
+}
+@media (min-width: 1920px) {
+  :root { --sidebar-width: 520px; }
+}
+@media (min-width: 2560px) {
+  :root { --sidebar-width: 580px; }
+}
+
 .maplibregl-ctrl-attrib {
   font-size: 10px !important;
 }
