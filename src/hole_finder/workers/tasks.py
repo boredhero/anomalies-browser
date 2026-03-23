@@ -478,3 +478,19 @@ def run_ml_pass(self, dem_path: str, pass_name: str, config: dict):
         "pass_name": pass_name,
         "num_detections": len(candidates),
     }
+
+
+@app.task(bind=True, queue="process")
+def run_storage_eviction(self):
+    """LRU storage eviction — runs daily via Celery Beat.
+
+    Deletes tiles not accessed in 30 days, then caps total at 700GB
+    by evicting oldest-accessed first.
+    """
+    from hole_finder.utils.storage import evict
+
+    data_dir = settings.data_dir
+    if not data_dir.exists():
+        return {"skipped": True, "reason": "data_dir not found"}
+
+    return evict(data_dir)

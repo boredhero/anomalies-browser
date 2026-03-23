@@ -27,3 +27,11 @@ app.config_from_object(
 )
 
 app.autodiscover_tasks(["hole_finder.workers"])
+
+# Periodic tasks (Celery Beat)
+app.conf.beat_schedule = {
+    "storage-eviction": {
+        "task": "hole_finder.workers.tasks.run_storage_eviction",
+        "schedule": 86400.0,  # Daily
+    },
+}
