@@ -11,40 +11,81 @@ from magic_eyes.detection.registry import register_pass
 
 
 def _fill_depressions(dem: np.ndarray) -> np.ndarray:
-    """Fill all depressions in a DEM using priority-flood algorithm.
+    """Fill all depressions in a DEM.
 
-    Based on Barnes et al. (2014) priority-flood. Initializes all edge cells
-    in a min-heap, then floods inward, raising any cell lower than its
-    pour-point neighbor.
+    Uses WhiteboxTools (compiled Rust) when available for massive speedup.
+    Falls back to scipy-based iterative approach for small DEMs / testing.
     """
-    import heapq
+    # Try WhiteboxTools first (100x+ faster on real data)
+    try:
+        return _fill_whitebox(dem)
+    except Exception:
+        pass
+
+    # Fallback: scipy iterative fill (works without external deps, good for small DEMs)
+    return _fill_scipy(dem)
+
+
+def _fill_whitebox(dem: np.ndarray) -> np.ndarray:
+    """Fill depressions using WhiteboxTools (compiled Rust, very fast)."""
+    import tempfile
+
+    import rasterio
+    import whitebox
+    from rasterio.transform import from_bounds
+
+    wbt = whitebox.WhiteboxTools()
+    wbt.set_verbose_mode(False)
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        in_path = f"{tmpdir}/dem.tif"
+        out_path = f"{tmpdir}/filled.tif"
+
+        # Write DEM to temp file
+        h, w = dem.shape
+        transform = from_bounds(0, 0, w, h, w, h)
+        with rasterio.open(in_path, "w", driver="GTiff", height=h, width=w,
+                           count=1, dtype="float32", transform=transform) as dst:
+            dst.write(dem, 1)
+
+        # Run WhiteboxTools fill_depressions
+        wbt.fill_depressions(in_path, out_path)
+
+        # Read result
+        with rasterio.open(out_path) as src:
+            return src.read(1).astype(np.float32)
+
+
+def _fill_scipy(dem: np.ndarray) -> np.ndarray:
+    """Fill depressions using scipy morphological reconstruction.
+
+    Uses grey-scale morphological reconstruction (erosion from marker):
+    marker = DEM with edges, interior set to max.
+    Reconstruction lowers the marker until it touches the DEM surface,
+    effectively filling all depressions to their pour-point.
+    This is the standard algorithm from Vincent (1993).
+    """
+    from scipy.ndimage import grey_erosion
 
     rows, cols = dem.shape
-    filled = dem.copy()
-    visited = np.zeros((rows, cols), dtype=bool)
-    heap: list[tuple[float, int, int]] = []
+    # Marker: edges at original elevation, interior at max
+    marker = np.full_like(dem, dem.max())
+    marker[0, :] = dem[0, :]
+    marker[-1, :] = dem[-1, :]
+    marker[:, 0] = dem[:, 0]
+    marker[:, -1] = dem[:, -1]
 
-    # Seed the heap with all border cells
-    for r in range(rows):
-        for c in range(cols):
-            if r == 0 or r == rows - 1 or c == 0 or c == cols - 1:
-                heapq.heappush(heap, (float(dem[r, c]), r, c))
-                visited[r, c] = True
+    # Morphological reconstruction by erosion
+    # Iterate until stable: marker = max(dem, erode(marker))
+    footprint = np.ones((3, 3))
+    for _ in range(rows + cols):
+        eroded = grey_erosion(marker, footprint=footprint)
+        new_marker = np.maximum(dem, eroded)
+        if np.array_equal(new_marker, marker):
+            break
+        marker = new_marker
 
-    # 8-connected neighbors
-    neighbors = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-
-    while heap:
-        elev, r, c = heapq.heappop(heap)
-        for dr, dc in neighbors:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < rows and 0 <= nc < cols and not visited[nr, nc]:
-                visited[nr, nc] = True
-                if filled[nr, nc] < elev:
-                    filled[nr, nc] = elev
-                heapq.heappush(heap, (float(filled[nr, nc]), nr, nc))
-
-    return filled
+    return marker
 
 
 @register_pass

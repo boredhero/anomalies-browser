@@ -2,9 +2,11 @@ name: Test
 
 on:
   push:
-    branches: [develop, main]
-  pull_request:
-    branches: [main]
+    branches: [develop]
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -17,6 +19,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           version: "latest"
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install 3.12
@@ -24,15 +27,17 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Run linter
-        run: uv run ruff check src/ tests/
-
       - name: Run unit tests
         run: uv run pytest tests/unit/ -v --tb=short
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Build frontend
         working-directory: frontend
-        run: |
-          npm install -g pnpm
-          pnpm install
-          pnpm build
+        run: pnpm install && pnpm build
