@@ -4,9 +4,10 @@ import type { Basemap, FeatureType } from '../../types';
 
 const ALL_TYPES: FeatureType[] = ['cave_entrance', 'mine_portal', 'sinkhole', 'depression', 'collapse_pit', 'spring', 'unknown'];
 const BASEMAPS: { value: Basemap; label: string }[] = [
-  { value: 'dark', label: 'Dark' },
   { value: 'satellite', label: 'Satellite' },
-  { value: 'topo', label: 'Topographic' },
+  { value: 'lidar', label: 'LiDAR' },
+  { value: 'topo', label: 'Topo' },
+  { value: 'dark', label: 'Dark' },
 ];
 
 export default function FilterPanel() {

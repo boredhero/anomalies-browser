@@ -47,7 +47,7 @@ export interface DetectionFilters {
   validated?: boolean | null;
 }
 
-export type Basemap = 'satellite' | 'topo' | 'dark';
+export type Basemap = 'satellite' | 'topo' | 'dark' | 'lidar';
 
 export const FEATURE_COLORS: Record<FeatureType, string> = {
   cave_entrance: '#ef4444',
