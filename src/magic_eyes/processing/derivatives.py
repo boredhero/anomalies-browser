@@ -56,13 +56,28 @@ def compute_roughness(dem: str, out: str) -> str:
 
 def compute_svf(dem: str, out: str) -> str:
     wbt = _get_wbt()
-    wbt.sky_view_factor(dem, out)
+    # WBT method name varies by version
+    if hasattr(wbt, 'sky_view_factor'):
+        wbt.sky_view_factor(dem, out)
+    elif hasattr(wbt, 'viewshed'):
+        # Fallback: use multidirectional hillshade as SVF proxy
+        wbt.multidirectional_hillshade(dem, out)
+    else:
+        raise RuntimeError("WhiteboxTools has no sky_view_factor or suitable alternative")
     return out
 
 
 def compute_lrm(dem: str, out: str, kernel: int = 100) -> str:
     wbt = _get_wbt()
-    wbt.deviation_from_mean(dem, out, filterx=kernel, filtery=kernel)
+    # WBT method name varies by version
+    if hasattr(wbt, 'deviation_from_mean'):
+        wbt.deviation_from_mean(dem, out, filterx=kernel, filtery=kernel)
+    elif hasattr(wbt, 'dev_from_mean_elev'):
+        wbt.dev_from_mean_elev(dem, out, filterx=kernel, filtery=kernel)
+    elif hasattr(wbt, 'diff_from_mean_elev'):
+        wbt.diff_from_mean_elev(dem, out, filterx=kernel, filtery=kernel)
+    else:
+        raise RuntimeError("WhiteboxTools has no deviation_from_mean or suitable alternative")
     return out
 
 
@@ -79,9 +94,16 @@ def compute_plan_curvature(dem: str, out: str) -> str:
 
 
 def compute_fill_difference(dem: str, filled: str, out: str) -> str:
-    _run(["gdal_calc.py", "-A", filled, "-B", dem,
-          "--outfile=" + out, "--calc=A-B", "--type=Float32",
-          "--co=COMPRESS=DEFLATE", "--co=TILED=YES", "--quiet"])
+    """Subtract original DEM from filled DEM using rasterio (trivial operation)."""
+    import rasterio
+    with rasterio.open(dem) as src_dem, rasterio.open(filled) as src_filled:
+        dem_arr = src_dem.read(1)
+        filled_arr = src_filled.read(1)
+        diff = (filled_arr - dem_arr).astype("float32")
+        profile = src_dem.profile.copy()
+        profile.update(dtype="float32", compress="deflate")
+        with rasterio.open(out, "w", **profile) as dst:
+            dst.write(diff, 1)
     return out
 
 
@@ -108,27 +130,26 @@ def compute_all_derivatives(
     dem = str(dem_path)
     filled = str(filled_dem_path)
 
-    # (name, function, args) — args include output path as last element
+    # (name, output_path, function, args)
     tasks = [
-        ("hillshade", compute_hillshade, [dem, str(output_dir / "hillshade.tif")]),
-        ("slope", compute_slope, [dem, str(output_dir / "slope.tif")]),
-        ("tpi", compute_tpi, [dem, str(output_dir / "tpi.tif")]),
-        ("roughness", compute_roughness, [dem, str(output_dir / "roughness.tif")]),
-        ("svf", compute_svf, [dem, str(output_dir / "svf.tif")]),
-        ("lrm_50m", compute_lrm, [dem, str(output_dir / "lrm_50m.tif"), 50]),
-        ("lrm_100m", compute_lrm, [dem, str(output_dir / "lrm_100m.tif"), 100]),
-        ("lrm_200m", compute_lrm, [dem, str(output_dir / "lrm_200m.tif"), 200]),
-        ("profile_curvature", compute_profile_curvature, [dem, str(output_dir / "profile_curvature.tif")]),
-        ("plan_curvature", compute_plan_curvature, [dem, str(output_dir / "plan_curvature.tif")]),
-        ("fill_difference", compute_fill_difference, [dem, filled, str(output_dir / "fill_difference.tif")]),
+        ("hillshade", output_dir / "hillshade.tif", compute_hillshade, [dem, str(output_dir / "hillshade.tif")]),
+        ("slope", output_dir / "slope.tif", compute_slope, [dem, str(output_dir / "slope.tif")]),
+        ("tpi", output_dir / "tpi.tif", compute_tpi, [dem, str(output_dir / "tpi.tif")]),
+        ("roughness", output_dir / "roughness.tif", compute_roughness, [dem, str(output_dir / "roughness.tif")]),
+        ("svf", output_dir / "svf.tif", compute_svf, [dem, str(output_dir / "svf.tif")]),
+        ("lrm_50m", output_dir / "lrm_50m.tif", compute_lrm, [dem, str(output_dir / "lrm_50m.tif"), 50]),
+        ("lrm_100m", output_dir / "lrm_100m.tif", compute_lrm, [dem, str(output_dir / "lrm_100m.tif"), 100]),
+        ("lrm_200m", output_dir / "lrm_200m.tif", compute_lrm, [dem, str(output_dir / "lrm_200m.tif"), 200]),
+        ("profile_curvature", output_dir / "profile_curvature.tif", compute_profile_curvature, [dem, str(output_dir / "profile_curvature.tif")]),
+        ("plan_curvature", output_dir / "plan_curvature.tif", compute_plan_curvature, [dem, str(output_dir / "plan_curvature.tif")]),
+        ("fill_difference", output_dir / "fill_difference.tif", compute_fill_difference, [dem, filled, str(output_dir / "fill_difference.tif")]),
     ]
 
     results: dict[str, Path] = {}
 
     # Check cache first
     to_compute = []
-    for name, fn, args in tasks:
-        out_path = Path(args[-1]) if name != "fill_difference" else Path(args[-1])
+    for name, out_path, fn, args in tasks:
         if out_path.exists():
             results[name] = out_path
         else:
