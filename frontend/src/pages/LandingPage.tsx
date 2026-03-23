@@ -37,25 +37,28 @@ export default function LandingPage() {
   const tourIndex = useStore((s) => s.tourIndex);
   const setTourIndex = useStore((s) => s.setTourIndex);
 
+  // Store the scan center so handleProcessingComplete doesn't depend on userLocation timing
+  const scanCenter = useRef<{ lat: number; lon: number } | null>(null);
   const jobProgress = useJobProgress(phase === 'processing' ? activeJobId : null);
 
   // Shared flow after getting a location (from geo or zip)
   const handleLocationAcquired = useCallback(async (lat: number, lon: number) => {
+    console.log('[HoleFinder] Location acquired:', lat, lon);
+    scanCenter.current = { lat, lon };
     setUserLocation({ lat, lon });
     setTargetViewState({ longitude: lon, latitude: lat, zoom: 14, pitch: 45, bearing: -15 });
 
     try {
-      // Always trigger a fresh scan — ensures polygon outlines are generated
-      // Consumer scan endpoint clears stale detections in the area first
       const { job_id } = await startConsumerScan(lat, lon, 3);
+      console.log('[HoleFinder] Scan started, job:', job_id);
       setActiveJobId(job_id);
       setPhase('processing');
-    } catch {
-      // If scan fails, just go to explore with whatever MVT tiles show
+    } catch (err) {
+      console.error('[HoleFinder] Scan failed:', err);
       setSearchStale(true);
       setPhase('explore');
     }
-  }, [setUserLocation, setTargetViewState, setTourDetections, setTourIndex, setActiveJobId, setSearchStale]);
+  }, [setUserLocation, setTargetViewState, setActiveJobId, setSearchStale]);
 
   const handleFindNearMe = useCallback(() => {
     if (!navigator.geolocation) {
@@ -110,27 +113,49 @@ export default function LandingPage() {
     setPhase('explore');
   }, [setTargetViewState, setSearchStale]);
 
-  // Handle processing completion
-  const handleProcessingComplete = useCallback(async () => {
-    if (!userLocation) {
+  // Watch for job completion — fetch detections and transition to results/tour
+  const completionHandled = useRef(false);
+  useEffect(() => {
+    if (phase !== 'processing') {
+      completionHandled.current = false;
+      return;
+    }
+    if (completionHandled.current) return;
+
+    const status = jobProgress.status;
+    if (status !== 'COMPLETED' && status !== 'FAILED') return;
+
+    completionHandled.current = true;
+    console.log('[HoleFinder] Job finished:', status);
+
+    if (status === 'FAILED') {
+      // ProcessingScreen already shows error UI
+      return;
+    }
+
+    // Fetch detections from the scanned area
+    const center = scanCenter.current;
+    if (!center) {
+      console.error('[HoleFinder] No scan center — going to explore');
+      setSearchStale(true);
       setPhase('explore');
       return;
     }
-    // Fetch detections from the processed area
-    const { lat, lon } = userLocation;
+
     const r = 3 / 111.32;
-    try {
-      const data = await getDetections({
-        west: lon - r, south: lat - r, east: lon + r, north: lat + r,
-        min_confidence: 0.5,
-        limit: 50,
-      });
+    getDetections({
+      west: center.lon - r, south: center.lat - r,
+      east: center.lon + r, north: center.lat + r,
+      min_confidence: 0.5,
+      limit: 50,
+    }).then((data) => {
       const dets: Detection[] = (data.features || []).map((f: any) => ({
         id: f.id,
         lon: f.geometry.coordinates[0],
         lat: f.geometry.coordinates[1],
         ...f.properties,
       }));
+      console.log('[HoleFinder] Fetched', dets.length, 'detections for tour');
       setTourDetections(dets);
       setTourIndex(0);
       setActiveJobId(null);
@@ -141,22 +166,12 @@ export default function LandingPage() {
         setSearchStale(true);
         setPhase('explore');
       }
-    } catch {
+    }).catch((err) => {
+      console.error('[HoleFinder] Failed to fetch detections:', err);
+      setSearchStale(true);
       setPhase('explore');
-    }
-  }, [userLocation, setTourDetections, setTourIndex, setActiveJobId, setSearchStale]);
-
-  // Watch for job completion — useEffect prevents infinite re-call loop
-  const completionHandled = useRef(false);
-  useEffect(() => {
-    if (phase === 'processing' && jobProgress.status === 'COMPLETED' && !completionHandled.current) {
-      completionHandled.current = true;
-      handleProcessingComplete();
-    }
-    if (phase !== 'processing') {
-      completionHandled.current = false;
-    }
-  }, [phase, jobProgress.status, handleProcessingComplete]);
+    });
+  }, [phase, jobProgress.status, setTourDetections, setTourIndex, setActiveJobId, setSearchStale, setTargetViewState]);
 
   // Tour navigation
   const handleTourNext = useCallback(() => {
@@ -405,9 +420,10 @@ function ExploreSearchButton({ onResults }: { onResults: (dets: Detection[]) => 
         lat: f.geometry.coordinates[1],
         ...f.properties,
       }));
+      console.log('[HoleFinder] Search found', dets.length, 'detections');
       onResults(dets);
-    } catch {
-      // ignore
+    } catch (err) {
+      console.error('[HoleFinder] Search failed:', err);
     }
     setLoading(false);
   };
