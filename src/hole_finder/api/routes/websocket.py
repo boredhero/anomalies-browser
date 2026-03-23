@@ -48,19 +48,26 @@ async def job_progress_ws(websocket: WebSocket):
         while True:
             # Poll for active jobs and send updates
             async with async_session_factory() as session:
+                # Include recently completed/failed jobs so clients catch the transition
+                from datetime import UTC, datetime, timedelta
+                cutoff = datetime.now(UTC) - timedelta(minutes=5)
                 stmt = select(Job).where(
-                    Job.status.in_(["PENDING", "RUNNING"])
+                    (Job.status.in_(["PENDING", "RUNNING"]))
+                    | ((Job.status.in_(["COMPLETED", "FAILED"])) & (Job.completed_at >= cutoff))
                 ).order_by(Job.created_at.desc()).limit(50)
                 result = await session.execute(stmt)
                 jobs = result.scalars().all()
 
                 updates = []
                 for j in jobs:
+                    summary = j.result_summary or {}
                     updates.append({
                         "id": str(j.id),
                         "status": j.status.value if j.status else "unknown",
                         "progress": j.progress or 0.0,
                         "job_type": j.job_type.value if j.job_type else "unknown",
+                        "stage": summary.get("stage"),
+                        "total_detections": summary.get("total_detections"),
                     })
 
                 if updates:

@@ -19,6 +19,7 @@
     "@luma.gl/shadertools": "9.1.10",
     "@tailwindcss/vite": "^4.2.2",
     "@tanstack/react-query": "^5.95.0",
+    "framer-motion": "^12.38.0",
     "lucide-react": "^0.577.0",
     "maplibre-gl": "4.7.1",
     "react": "^19.2.4",

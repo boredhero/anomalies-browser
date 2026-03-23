@@ -25,7 +25,7 @@ export default function DetailPanel() {
   const color = FEATURE_COLORS[detection.feature_type] || '#6b7280';
 
   return (
-    <div className="flex flex-col gap-4 p-5">
+    <div className="flex flex-col gap-4 p-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => setSelectedDetection(null)} className="text-slate-400 hover:text-white">
@@ -41,8 +41,8 @@ export default function DetailPanel() {
       </div>
 
       {/* Confidence bar */}
-      <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all" style={{ width: `${detection.confidence * 100}%`, backgroundColor: color }} />
+      <div className="h-2 bg-slate-700 rounded overflow-hidden">
+        <div className="h-full rounded transition-all" style={{ width: `${detection.confidence * 100}%`, backgroundColor: color }} />
       </div>
 
       {/* Coordinates */}
@@ -82,19 +82,19 @@ export default function DetailPanel() {
         <textarea
           value={notes} onChange={(e) => setNotes(e.target.value)}
           placeholder="Notes (optional)..."
-          className="w-full bg-slate-800 border border-slate-600 rounded-lg text-sm p-3 text-slate-200 resize-none h-20 mb-3"
+          className="w-full bg-slate-800 border border-slate-600 rounded text-sm p-3 text-slate-200 resize-none h-20 mb-3"
         />
         <div className="flex gap-2.5">
           <button onClick={() => validate.mutate('confirmed')}
-            className="flex-1 flex items-center justify-center gap-2 bg-green-700 hover:bg-green-600 text-white text-sm py-2.5 rounded-lg transition-colors font-medium">
+            className="flex-1 flex items-center justify-center gap-2 bg-green-700 hover:bg-green-600 text-white text-sm py-2.5 rounded transition-colors font-medium">
             <CheckCircle size={16} /> Confirm
           </button>
           <button onClick={() => validate.mutate('rejected')}
-            className="flex-1 flex items-center justify-center gap-2 bg-red-700 hover:bg-red-600 text-white text-sm py-2.5 rounded-lg transition-colors font-medium">
+            className="flex-1 flex items-center justify-center gap-2 bg-red-700 hover:bg-red-600 text-white text-sm py-2.5 rounded transition-colors font-medium">
             <XCircle size={16} /> Reject
           </button>
           <button onClick={() => validate.mutate('uncertain')}
-            className="flex-1 flex items-center justify-center gap-2 bg-slate-600 hover:bg-slate-500 text-white text-sm py-2.5 rounded-lg transition-colors font-medium">
+            className="flex-1 flex items-center justify-center gap-2 bg-slate-600 hover:bg-slate-500 text-white text-sm py-2.5 rounded transition-colors font-medium">
             <HelpCircle size={16} /> Unsure
           </button>
         </div>
@@ -110,7 +110,7 @@ export default function DetailPanel() {
               body: JSON.stringify({ label: 'Interesting', color: '#f59e0b' }),
             }).then(() => qc.invalidateQueries({ queryKey: ['saved'] }));
           }}
-          className="w-full flex items-center justify-center gap-2 bg-amber-700 hover:bg-amber-600 text-white text-sm py-2.5 rounded-lg transition-colors font-medium">
+          className="w-full flex items-center justify-center gap-2 bg-amber-700 hover:bg-amber-600 text-white text-sm py-2.5 rounded transition-colors font-medium">
           <Bookmark size={16} /> Save Detection
         </button>
       </section>
@@ -155,7 +155,7 @@ function CommentsSection({ detectionId }: { detectionId: string }) {
       </h4>
 
       {comments.map((c: any) => (
-        <div key={c.id} className="bg-slate-800 rounded-lg p-3 mb-2">
+        <div key={c.id} className="bg-slate-800 rounded p-3 mb-2">
           <div className="text-sm text-slate-200">{c.text}</div>
           <div className="text-xs text-slate-500 mt-1">{c.author} &middot; {new Date(c.created_at).toLocaleDateString()}</div>
         </div>
@@ -163,12 +163,12 @@ function CommentsSection({ detectionId }: { detectionId: string }) {
 
       <div className="flex gap-2 mt-3">
         <input value={author} onChange={(e) => setAuthor(e.target.value)}
-          placeholder="Name" className="w-20 bg-slate-800 border border-slate-600 rounded-lg text-sm p-2.5 text-slate-200" />
+          placeholder="Name" className="w-20 bg-slate-800 border border-slate-600 rounded text-sm p-2.5 text-slate-200" />
         <input value={text} onChange={(e) => setText(e.target.value)}
-          placeholder="Add comment..." className="flex-1 bg-slate-800 border border-slate-600 rounded-lg text-sm p-2.5 text-slate-200"
+          placeholder="Add comment..." className="flex-1 bg-slate-800 border border-slate-600 rounded text-sm p-2.5 text-slate-200"
           onKeyDown={(e) => e.key === 'Enter' && text && addComment.mutate()} />
         <button onClick={() => text && addComment.mutate()} disabled={!text}
-          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 rounded-lg">
+          className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 rounded">
           <Send size={16} />
         </button>
       </div>
@@ -178,7 +178,7 @@ function CommentsSection({ detectionId }: { detectionId: string }) {
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-slate-800 rounded-lg p-3">
+    <div className="bg-slate-800 rounded p-3">
       <div className="text-slate-400 text-xs uppercase tracking-wide">{label}</div>
       <div className="text-slate-100 font-mono text-base mt-0.5">{value}</div>
     </div>

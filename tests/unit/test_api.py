@@ -132,6 +132,9 @@ class TestRouteStructure:
             "/api/detections/{detection_id}/save",
             "/api/saved/{save_id}",
             "/api/info",
+            "/api/geocode",
+            "/api/detections/count",
+            "/api/explore/scan",
         ]
 
         for path in expected:

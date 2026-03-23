@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
         debug,
         detections,
         exports,
+        geocode,
         jobs,
         raster_tiles,
         regions,
@@ -62,6 +63,7 @@ def create_app() -> FastAPI:
     app.include_router(exports.router, prefix="/api")
     app.include_router(tiles.router, prefix="/api")
     app.include_router(raster_tiles.router, prefix="/api")
+    app.include_router(geocode.router, prefix="/api")
     app.include_router(debug.router)
     app.include_router(websocket.router)
 

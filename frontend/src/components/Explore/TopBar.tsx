@@ -23,12 +23,12 @@ export default function TopBar() {
         <span className="text-base font-bold text-white tracking-wide whitespace-nowrap">HOLE FINDER</span>
 
         {/* Basemap pills */}
-        <div className="flex gap-1 bg-slate-800/80 rounded-lg p-1 ml-3">
+        <div className="flex gap-1 bg-slate-800/80 rounded p-1 ml-3">
           {BASEMAPS.map((b) => (
             <button
               key={b.value}
               onClick={() => setBasemap(b.value)}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-sm transition-colors ${
                 basemap === b.value ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -41,7 +41,7 @@ export default function TopBar() {
         <div className="flex gap-1.5 ml-2">
           <button
             onClick={toggleGroundTruth}
-            className={`p-2 rounded-lg transition-colors ${showGroundTruth ? 'bg-yellow-600/30 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`p-2 rounded transition-colors ${showGroundTruth ? 'bg-yellow-600/30 text-yellow-400' : 'text-slate-500 hover:text-slate-300'}`}
             title="Ground truth sites"
           >
             <MapPin size={18} />

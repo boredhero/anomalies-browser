@@ -4,6 +4,7 @@ import uuid
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,12 @@ from hole_finder.db.models import Job, JobType
 from hole_finder.db.models import JobStatus as JobStatusEnum
 
 router = APIRouter(tags=["jobs"])
+
+
+class ConsumerScanRequest(BaseModel):
+    lat: float = Field(..., ge=-90, le=90)
+    lon: float = Field(..., ge=-180, le=180)
+    radius_km: float = Field(3.0, ge=0.5, le=5.0)
 
 
 def _job_to_schema(j: Job) -> JobStatus:
@@ -135,3 +142,76 @@ async def cancel_job(
     #     app.control.revoke(job.celery_task_id, terminate=True)
 
     return {"status": "cancelled", "job_id": str(job_id)}
+
+
+@router.post("/explore/scan")
+async def consumer_scan(
+    body: ConsumerScanRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Start a small processing job for the consumer "Find a Hole Near Me" flow.
+
+    Restricted to a small radius (max 5km) and 4 tiles to keep processing
+    under 5 minutes. The consumer never sees the word "job" — this is
+    presented as "scanning your area."
+    """
+    r = body.radius_km / 111.32  # degrees approx
+
+    bbox_geojson = {
+        "type": "Polygon",
+        "coordinates": [[
+            [body.lon - r, body.lat - r],
+            [body.lon + r, body.lat - r],
+            [body.lon + r, body.lat + r],
+            [body.lon - r, body.lat + r],
+            [body.lon - r, body.lat - r],
+        ]],
+    }
+
+    from geoalchemy2.shape import from_shape
+    from shapely.geometry import shape
+
+    region_geom = from_shape(shape(bbox_geojson), srid=4326)
+
+    job = Job(
+        job_type=JobType.FULL_PIPELINE,
+        status=JobStatusEnum.PENDING,
+        region=region_geom,
+        config={
+            "pass_config": "sinkhole_survey",
+            "tile_limit": 4,
+            "consumer": True,
+            "center_lat": body.lat,
+            "center_lon": body.lon,
+            "radius_km": body.radius_km,
+        },
+        progress=0.0,
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+
+    # Submit to Celery
+    try:
+        from hole_finder.workers.tasks import run_full_pipeline
+
+        task = run_full_pipeline.delay(
+            job_id=str(job.id),
+            region_name=None,
+            pass_config="sinkhole_survey",
+            bbox_geojson=bbox_geojson,
+        )
+        job.celery_task_id = task.id
+        job.status = JobStatusEnum.RUNNING
+        job.started_at = datetime.now(UTC)
+        await db.commit()
+    except Exception:
+        pass  # Celery not running is non-fatal
+
+    # Estimate: ~75s per tile, assume 3 tiles avg
+    estimated_minutes = round(3 * 75 / 60, 1)
+
+    return {
+        "job_id": str(job.id),
+        "estimated_minutes": estimated_minutes,
+    }

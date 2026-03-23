@@ -64,6 +64,22 @@ interface AppState {
   setSearchBbox: (b: [number, number, number, number]) => void;
   searchStale: boolean;
   setSearchStale: (v: boolean) => void;
+
+  // Consumer processing state
+  activeJobId: string | null;
+  setActiveJobId: (id: string | null) => void;
+  processingStage: string | null;
+  setProcessingStage: (s: string | null) => void;
+  processingProgress: number;
+  setProcessingProgress: (p: number) => void;
+
+  // Guided tour state
+  tourDetections: Detection[];
+  setTourDetections: (d: Detection[]) => void;
+  tourIndex: number;
+  setTourIndex: (i: number) => void;
+  tourActive: boolean;
+  setTourActive: (v: boolean) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -117,4 +133,18 @@ export const useStore = create<AppState>((set) => ({
   setSearchBbox: (b) => set({ searchBbox: b, searchStale: false }),
   searchStale: false,
   setSearchStale: (v) => set({ searchStale: v }),
+
+  activeJobId: null,
+  setActiveJobId: (id) => set({ activeJobId: id }),
+  processingStage: null,
+  setProcessingStage: (s) => set({ processingStage: s }),
+  processingProgress: 0,
+  setProcessingProgress: (p) => set({ processingProgress: p }),
+
+  tourDetections: [],
+  setTourDetections: (d) => set({ tourDetections: d }),
+  tourIndex: 0,
+  setTourIndex: (i) => set({ tourIndex: i }),
+  tourActive: false,
+  setTourActive: (v) => set({ tourActive: v }),
 }));
