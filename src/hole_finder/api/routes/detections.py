@@ -92,6 +92,31 @@ async def list_detections(
     return DetectionCollection(features=features, total_count=total)
 
 
+@router.get("/detections/count")
+async def count_detections(
+    lat: float = Query(..., description="Center latitude"),
+    lon: float = Query(..., description="Center longitude"),
+    radius_km: float = Query(3.0, ge=0.1, le=50.0, description="Search radius in km"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Fast count of detections near a point. Used to decide whether to trigger processing."""
+    from sqlalchemy import text
+
+    result = await db.execute(
+        text("""
+            SELECT COUNT(*) FROM detections
+            WHERE ST_DWithin(
+                geometry::geography,
+                ST_SetSRID(ST_Point(:lon, :lat), 4326)::geography,
+                :radius_m
+            )
+        """),
+        {"lat": lat, "lon": lon, "radius_m": radius_km * 1000},
+    )
+    count = result.scalar_one()
+    return {"count": count}
+
+
 @router.get("/detections/{detection_id}", response_model=DetectionDetail)
 async def get_detection(
     detection_id: uuid.UUID,

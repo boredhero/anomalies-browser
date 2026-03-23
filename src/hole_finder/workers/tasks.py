@@ -218,7 +218,7 @@ def run_full_pipeline(self, job_id: str, region_name: str | None, pass_config: s
 
     profiler = new_profiler(f"full_pipeline:{job_id[:8]}")
 
-    def _update_job(status: str, progress: float, message: str = "", summary: dict | None = None):
+    def _update_job(status: str, progress: float, message: str = "", summary: dict | None = None, stage: str | None = None):
         async def _do():
             async with _async_session() as session:
                 job = await session.get(Job, UUID(job_id))
@@ -229,13 +229,18 @@ def run_full_pipeline(self, job_id: str, region_name: str | None, pass_config: s
                         job.completed_at = datetime.now(UTC)
                     if summary:
                         job.result_summary = summary
+                    elif stage:
+                        # Merge stage into existing result_summary
+                        existing = job.result_summary or {}
+                        existing["stage"] = stage
+                        job.result_summary = existing
                     if message and status == "FAILED":
                         job.error_message = message
                     await session.commit()
         asyncio.run(_do())
 
     try:
-        _update_job("RUNNING", 5, "Discovering tiles")
+        _update_job("RUNNING", 5, "Discovering tiles", stage="discovering")
 
         # Discover tiles
         with profiler.stage("tile_discovery") as ctx:
@@ -260,10 +265,18 @@ def run_full_pipeline(self, job_id: str, region_name: str | None, pass_config: s
             _update_job("COMPLETED", 100, summary={"tiles": 0, "detections": 0})
             return
 
-        _update_job("RUNNING", 10, f"Downloading {len(tiles)} tiles")
+        _update_job("RUNNING", 10, f"Downloading {len(tiles)} tiles", stage="downloading")
 
-        # Download tiles — parallel (4 concurrent), limit to first 10 for safety
-        tile_limit = min(len(tiles), 500)
+        # Download tiles — parallel, respect config tile_limit (consumer jobs: 4)
+        async def _get_tile_limit():
+            async with _async_session() as session:
+                job = await session.get(Job, UUID(job_id))
+                if job and job.config and "tile_limit" in job.config:
+                    return job.config["tile_limit"]
+            return 500
+
+        config_limit = asyncio.run(_get_tile_limit())
+        tile_limit = min(len(tiles), config_limit)
         downloaded = []
         with profiler.stage("tile_downloads", tile_limit=tile_limit) as ctx:
             source = get_source("usgs_3dep")
@@ -293,7 +306,7 @@ def run_full_pipeline(self, job_id: str, region_name: str | None, pass_config: s
                 return [r for r in results if r is not None]
 
             downloaded = asyncio.run(_download_all())
-            _update_job("RUNNING", 40, f"Downloaded {len(downloaded)}/{tile_limit} tiles")
+            _update_job("RUNNING", 40, f"Downloaded {len(downloaded)}/{tile_limit} tiles", stage="analyzing")
             ctx["downloaded"] = len(downloaded)
             ctx["failed"] = tile_limit - len(downloaded)
 
@@ -455,9 +468,11 @@ def run_full_pipeline(self, job_id: str, region_name: str | None, pass_config: s
                         tile_results.append(res)
                         # Update progress
                         pct = 40 + (len(tile_results) / len(downloaded)) * 55
+                        tile_stage = "finishing" if pct > 90 else "analyzing"
                         _update_job("RUNNING", pct,
                                     f"Processed {len(tile_results)}/{len(downloaded)} tiles, "
-                                    f"{total_detections} detections so far")
+                                    f"{total_detections} detections so far",
+                                    stage=tile_stage)
                     except Exception as e:
                         log.error("tile_thread_failed", index=idx, error=str(e))
                         tile_results.append({"index": idx, "error": str(e)})

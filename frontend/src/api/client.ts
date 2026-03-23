@@ -72,3 +72,22 @@ export async function addGroundTruth(body: { name: string; feature_type: string;
 export async function getHealth() {
   return fetchJson<any>('/health');
 }
+
+export async function geocodeZip(zip: string) {
+  return fetchJson<{ lat: number; lon: number; city: string; state: string }>(`/geocode?zip=${zip}`);
+}
+
+export async function getDetectionCount(lat: number, lon: number, radiusKm: number) {
+  return fetchJson<{ count: number }>(`/detections/count?lat=${lat}&lon=${lon}&radius_km=${radiusKm}`);
+}
+
+export async function startConsumerScan(lat: number, lon: number, radiusKm: number) {
+  return fetchJson<{ job_id: string; estimated_minutes: number }>('/explore/scan', {
+    method: 'POST',
+    body: JSON.stringify({ lat, lon, radius_km: radiusKm }),
+  });
+}
+
+export async function getJob(id: string) {
+  return fetchJson<any>(`/jobs/${id}`);
+}
