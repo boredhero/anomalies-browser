@@ -111,7 +111,13 @@ export default function SwipeCard({
               {d.area_m2 != null && (
                 <div className="bg-slate-800 rounded p-2">
                   <div className="text-slate-500 uppercase">Area</div>
-                  <div className="text-slate-100 font-mono">{d.area_m2.toFixed(0)} m{'\u00B2'}</div>
+                  <div className="text-slate-100 font-mono">{d.area_m2.toFixed(0)} m{'\u00B2'} <span className="text-slate-400">({(d.area_m2 * 10.764).toFixed(0)} ft{'\u00B2'})</span></div>
+                </div>
+              )}
+              {(d.morphometrics?.volume_m3 as number) > 0 && (
+                <div className="bg-slate-800 rounded p-2">
+                  <div className="text-slate-500 uppercase">Volume</div>
+                  <div className="text-slate-100 font-mono">{(d.morphometrics!.volume_m3 as number).toFixed(0)} m{'\u00B3'} <span className="text-slate-400">({((d.morphometrics!.volume_m3 as number) * 35.315).toFixed(0)} ft{'\u00B3'})</span></div>
                 </div>
               )}
               {d.circularity != null && (
