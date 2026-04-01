@@ -1,12 +1,23 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getDetections, getGroundTruth } from '../api/client';
 import { useStore } from '../store';
-import type { Detection, GroundTruthSite } from '../types';
+import type { Detection, DetectionFilters, GroundTruthSite } from '../types';
+
+function useDebouncedFilters(delay = 500): DetectionFilters {
+  const filters = useStore((s) => s.filters);
+  const [debounced, setDebounced] = useState(filters);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(filters), delay);
+    return () => clearTimeout(timer);
+  }, [filters, delay]);
+  return debounced;
+}
 
 /** Auto-fetches on bbox change. Used by playground sidebar. */
 export function useDetections() {
   const bbox = useStore((s) => s.bbox);
-  const filters = useStore((s) => s.filters);
+  const filters = useDebouncedFilters();
 
   return useQuery({
     queryKey: ['detections', bbox, filters],
