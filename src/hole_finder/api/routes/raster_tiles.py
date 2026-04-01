@@ -234,7 +234,7 @@ async def warm_terrain_cache(
     south: float = Query(..., description="South latitude"),
     east: float = Query(..., description="East longitude"),
     north: float = Query(..., description="North latitude"),
-    min_zoom: int = Query(8, ge=0, le=20),
+    min_zoom: int = Query(12, ge=0, le=20),
     max_zoom: int = Query(15, ge=0, le=20),
 ):
     """Pre-render and cache all terrain tiles for a bbox across zoom levels.
@@ -246,7 +246,7 @@ async def warm_terrain_cache(
     rendered = 0
     proxied = 0
     client = _get_http_client()
-    sem = asyncio.Semaphore(10)
+    sem = asyncio.Semaphore(5)
     async def _warm_one(z: int, x: int, y: int) -> str:
         tile_path = settings.data_dir / "tile_cache" / "terrain" / str(z) / str(x) / f"{y}.png"
         if tile_path.exists() and tile_path.stat().st_size >= _MIN_PNG_BYTES:
