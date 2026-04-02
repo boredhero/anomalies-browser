@@ -20,8 +20,11 @@ const TERRAIN_SOURCE = {
   maxzoom: 15,
 };
 
+const MAPLIBRE_GLYPHS = 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf';
+
 const SATELLITE_STYLE = {
   version: 8 as const,
+  glyphs: MAPLIBRE_GLYPHS,
   sources: {
     'esri-satellite': {
       type: 'raster' as const,
@@ -55,6 +58,7 @@ const SATELLITE_STYLE = {
 
 const LIDAR_STYLE = {
   version: 8 as const,
+  glyphs: MAPLIBRE_GLYPHS,
   sources: {
     'topo-contours': {
       type: 'raster' as const,
@@ -405,46 +409,51 @@ function TileCoverageLayer() {
       if (!map.getSource('tile-coverage')) {
         map.addSource('tile-coverage', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       }
-      if (!map.getLayer('tile-coverage-fill')) {
-        map.addLayer({
-          id: 'tile-coverage-fill',
-          type: 'fill',
-          source: 'tile-coverage',
-          paint: {
-            'fill-color': ['match', ['get', 'source'], 'lidar', '#eab308', '#06b6d4'],
-            'fill-opacity': ['match', ['get', 'source'], 'lidar', 0.18, 0.08],
-          },
-        });
+      // Remove stale layers from previous style load before re-adding
+      for (const id of ['tile-coverage-label', 'tile-coverage-line', 'tile-coverage-fill']) {
+        if (map.getLayer(id)) map.removeLayer(id);
       }
-      if (!map.getLayer('tile-coverage-line')) {
-        map.addLayer({
-          id: 'tile-coverage-line',
-          type: 'line',
-          source: 'tile-coverage',
-          paint: {
-            'line-color': ['match', ['get', 'source'], 'lidar', '#eab308', '#06b6d4'],
-            'line-width': ['match', ['get', 'source'], 'lidar', 2, 0.5],
-            'line-opacity': ['match', ['get', 'source'], 'lidar', 0.8, 0.3],
-          },
-        });
-      }
-      if (!map.getLayer('tile-coverage-label')) {
-        map.addLayer({
-          id: 'tile-coverage-label',
-          type: 'symbol',
-          source: 'tile-coverage',
-          filter: ['==', ['get', 'source'], 'lidar'],
-          layout: {
-            'text-field': 'LiDAR',
-            'text-size': 10,
-            'text-allow-overlap': false,
-          },
-          paint: {
-            'text-color': '#eab308',
-            'text-halo-color': 'rgba(0,0,0,0.7)',
-            'text-halo-width': 1,
-          },
-        });
+      // Add layers on top of everything (no beforeId = topmost)
+      map.addLayer({
+        id: 'tile-coverage-fill',
+        type: 'fill',
+        source: 'tile-coverage',
+        paint: {
+          'fill-color': ['match', ['get', 'source'], 'lidar', '#eab308', '#06b6d4'],
+          'fill-opacity': ['match', ['get', 'source'], 'lidar', 0.25, 0.12],
+        },
+      });
+      map.addLayer({
+        id: 'tile-coverage-line',
+        type: 'line',
+        source: 'tile-coverage',
+        paint: {
+          'line-color': ['match', ['get', 'source'], 'lidar', '#eab308', '#06b6d4'],
+          'line-width': ['match', ['get', 'source'], 'lidar', 2.5, 1],
+          'line-opacity': ['match', ['get', 'source'], 'lidar', 0.9, 0.5],
+        },
+      });
+      map.addLayer({
+        id: 'tile-coverage-label',
+        type: 'symbol',
+        source: 'tile-coverage',
+        filter: ['==', ['get', 'source'], 'lidar'],
+        layout: {
+          'text-field': 'LiDAR',
+          'text-size': 11,
+          'text-font': ['Open Sans Semibold'],
+          'text-allow-overlap': false,
+        },
+        paint: {
+          'text-color': '#eab308',
+          'text-halo-color': 'rgba(0,0,0,0.8)',
+          'text-halo-width': 1.5,
+        },
+      });
+      // Set initial visibility based on current toggle state
+      const vis = useStore.getState().showTileCoverage ? 'visible' : 'none';
+      for (const id of ['tile-coverage-fill', 'tile-coverage-line', 'tile-coverage-label']) {
+        map.setLayoutProperty(id, 'visibility', vis);
       }
     };
     if (map.isStyleLoaded()) addLayers();
