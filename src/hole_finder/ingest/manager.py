@@ -77,36 +77,10 @@ def get_sources_for_region(region_name: str) -> list[str]:
 
 
 def get_sources_for_bbox(bbox: Polygon) -> list[str]:
-    """Determine which data sources cover a bbox by checking region overlaps.
-    Always includes usgs_3dep first, then appends any state-specific sources
-    whose region polygon intersects the given bbox."""
-    sources = ["usgs_3dep"]
-    seen = {"usgs_3dep"}
-    region_source_map = {
-        "western_pa": ["pasda"], "eastern_pa": ["pasda"],
-        "west_virginia": ["wv"], "eastern_ohio": ["oh"],
-        "upstate_ny": ["ny"], "western_nc": ["nc"], "western_md": ["md"],
-        "shenandoah_valley": ["va"],
-        "central_ky_karst": ["ky"],
-        "nw_nj_karst": ["nj"],
-        "western_ct": ["ct"],
-        "middle_tn_karst": ["tnm"], "east_tn_karst": ["tnm"],
-        "southern_in_karst": ["tnm"],
-        "western_vt": ["tnm"],
-        "white_mountains_nh": ["tnm"], "coastal_me": ["tnm"],
-        "rhode_island": ["tnm"], "delaware": ["tnm"],
-    }
-    for region_name, extra_sources in region_source_map.items():
-        try:
-            region_poly = load_region_bbox(region_name)
-            if region_poly.intersects(bbox):
-                for s in extra_sources:
-                    if s not in seen:
-                        sources.append(s)
-                        seen.add(s)
-        except FileNotFoundError:
-            continue
-    return sources
+    """Return data sources to try for a bbox search.
+    Always usgs_3dep first (STAC, fast), then tnm (universal US fallback).
+    Region polygons are NOT used — tnm covers the entire US."""
+    return ["usgs_3dep", "tnm"]
 
 
 def load_region_bbox(region_name: str) -> Polygon:
