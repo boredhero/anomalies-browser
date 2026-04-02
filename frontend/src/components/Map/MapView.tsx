@@ -591,6 +591,10 @@ export default function MapView() {
       initialViewState={storedViewState ?? DEFAULT_VIEW}
       style={{ width: '100%', height: '100%' }}
       mapStyle={BASEMAP_STYLES[basemap] as any}
+      dragRotate={true}
+      touchZoomRotate={true}
+      touchPitch={true}
+      pitchWithRotate={true}
       onMoveEnd={handleMoveEnd}
       onLoad={(evt) => {
         const map = evt.target;
