@@ -79,24 +79,50 @@ def generate_dem_pdal(
     filled_path = output_dir / f"{stem}_filled.tif"
 
     if not dem_path.exists():
-        pipeline = [
-            {"type": "readers.copc" if str(input_path).endswith(".copc.laz") else "readers.las",
-             "filename": str(input_path)},
-        ]
+        reader_type = "readers.copc" if str(input_path).endswith(".copc.laz") else "readers.las"
+        # Auto-detect if data is pre-classified — skip SMRF if >50% of points have Class 2 (ground)
+        pre_classified = False
+        try:
+            info_proc = subprocess.run(["pdal", "info", "--stats", "--dimensions", "Classification", str(input_path)], capture_output=True, text=True, timeout=60)
+            if info_proc.returncode == 0:
+                import re as _re
+                # Look for count of Classification=2 in stats
+                _info = info_proc.stdout
+                # Check if Classification dimension has values > 0 (not all unclassified)
+                _class2_match = _re.search(r'"statistic"[^}]*"name":\s*"Classification"[^}]*"count":\s*(\d+)', _info)
+                _total_match = _re.search(r'"num_points":\s*(\d+)', _info)
+                if _total_match:
+                    total_pts = int(_total_match.group(1))
+                    # Check if Classification=2 points exist by running a quick count pipeline
+                    count_proc = subprocess.run(["pdal", "pipeline", "--stdin"], input=json.dumps({"pipeline": [{"type": reader_type, "filename": str(input_path)}, {"type": "filters.range", "limits": "Classification[2:2]"}, {"type": "filters.stats"}]}), capture_output=True, text=True, timeout=120)
+                    if count_proc.returncode == 0:
+                        _cnt_match = _re.search(r'"count":\s*(\d+)', count_proc.stdout)
+                        if _cnt_match:
+                            ground_pts = int(_cnt_match.group(1))
+                            ground_pct = ground_pts / total_pts * 100 if total_pts > 0 else 0
+                            pre_classified = ground_pct > 10  # >10% ground points = already classified
+                            log.info("classification_check", total=total_pts, ground=ground_pts, ground_pct=round(ground_pct, 1), pre_classified=pre_classified)
+        except Exception as e:
+            log.warning("classification_check_failed", error=str(e))
+        pipeline = [{"type": reader_type, "filename": str(input_path)}]
         if target_srs:
             pipeline.append({"type": "filters.reprojection", "out_srs": target_srs})
-        # Fix zeroed return values (LAS 1.4 spec requires >=1) — some sources
-        # (e.g. NC NOAA 2015 Phase 3) have points with NumberOfReturns=0 which
-        # causes SMRF to reject the entire tile. Assign single-return values.
-        pipeline.append({"type": "filters.assign", "value": ["ReturnNumber = 1 WHERE ReturnNumber == 0", "NumberOfReturns = 1 WHERE NumberOfReturns == 0"]})
-        pipeline.extend([
-            {"type": "filters.smrf", "slope": 0.15, "window": 18, "threshold": 0.5},
-            {"type": "filters.range", "limits": "Classification[2:2]"},
-            {"type": "writers.gdal", "filename": str(dem_path), "resolution": resolution,
-             "output_type": "idw", "gdalopts": "COMPRESS=DEFLATE,TILED=YES,BLOCKXSIZE=256,BLOCKYSIZE=256",
-             "data_type": "float32"},
-        ])
-        log.info("pdal_dem_start", input=str(input_path), file_size_mb=round(input_path.stat().st_size / 1e6, 1))
+        if pre_classified:
+            # Data already has ground classification — skip SMRF, use mean interpolation (4-7x faster)
+            pipeline.extend([
+                {"type": "filters.range", "limits": "Classification[2:2]"},
+                {"type": "writers.gdal", "filename": str(dem_path), "resolution": resolution, "output_type": "mean", "radius": 1.5, "window_size": 1, "gdalopts": "COMPRESS=DEFLATE,TILED=YES,BLOCKXSIZE=256,BLOCKYSIZE=256", "data_type": "float32"},
+            ])
+            log.info("pdal_dem_start", input=str(input_path), file_size_mb=round(input_path.stat().st_size / 1e6, 1), mode="pre_classified_fast")
+        else:
+            # No classification — run full SMRF ground classification
+            pipeline.append({"type": "filters.assign", "value": ["ReturnNumber = 1 WHERE ReturnNumber == 0", "NumberOfReturns = 1 WHERE NumberOfReturns == 0"]})
+            pipeline.extend([
+                {"type": "filters.smrf", "slope": 0.15, "window": 18, "threshold": 0.5},
+                {"type": "filters.range", "limits": "Classification[2:2]"},
+                {"type": "writers.gdal", "filename": str(dem_path), "resolution": resolution, "output_type": "mean", "radius": 1.5, "window_size": 1, "gdalopts": "COMPRESS=DEFLATE,TILED=YES,BLOCKXSIZE=256,BLOCKYSIZE=256", "data_type": "float32"},
+            ])
+            log.info("pdal_dem_start", input=str(input_path), file_size_mb=round(input_path.stat().st_size / 1e6, 1), mode="smrf_classify")
         t0 = time.perf_counter()
         proc = subprocess.run(
             ["pdal", "pipeline", "--stdin"],
