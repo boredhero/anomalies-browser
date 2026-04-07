@@ -12,6 +12,7 @@ export default function PlaygroundPage() {
   const bbox = useStore((s) => s.bbox);
   const searchStale = useStore((s) => s.searchStale);
   const setSearchStale = useStore((s) => s.setSearchStale);
+  const bumpTileVersion = useStore((s) => s.bumpTileVersion);
   const activeJobId = useStore((s) => s.activeJobId);
   const setActiveJobId = useStore((s) => s.setActiveJobId);
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'done' | 'failed'>('idle');
@@ -28,6 +29,7 @@ export default function PlaygroundPage() {
       setScanStatus('done');
       setActiveJobId(null);
       setSearchStale(true);
+      bumpTileVersion();
       // Auto-dismiss after 4s
       setTimeout(() => setScanStatus('idle'), 4000);
     } else if (jobProgress.status === 'FAILED') {

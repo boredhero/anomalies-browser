@@ -185,6 +185,7 @@ function FlyToHandler() {
 function MVTLayerManager() {
   const { current: mapRef } = useMap();
   const showGroundTruth = useStore((s) => s.showGroundTruth);
+  const tileVersion = useStore((s) => s.tileVersion);
   const setSelectedDetection = useStore((s) => s.setSelectedDetection);
   const setDrawerState = useStore((s) => s.setDrawerState);
   const setSidebarOpen = useStore((s) => s.setSidebarOpen);
@@ -406,6 +407,19 @@ function MVTLayerManager() {
       addMVTLayers(map);
     });
   }, [mapRef, addMVTLayers, setSelectedDetection, setDrawerState, setSidebarOpen]);
+
+  // Force MVT tile reload when tileVersion bumps (after scan completion)
+  useEffect(() => {
+    if (tileVersion === 0) return; // skip initial
+    const map = mapRef?.getMap();
+    if (!map) return;
+    const src = map.getSource('detections-mvt') as any;
+    if (src) {
+      // Update tile URL with cache-busting param and reload
+      src.setTiles([`${window.location.origin}/api/tiles/{z}/{x}/{y}.mvt?min_confidence=0.3&v=${tileVersion}`]);
+      console.log('[MVT] Tile cache busted, version:', tileVersion);
+    }
+  }, [tileVersion, mapRef]);
 
   // Toggle ground truth visibility
   useEffect(() => {

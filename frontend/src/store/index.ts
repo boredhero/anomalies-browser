@@ -68,6 +68,8 @@ interface AppState {
   setSearchBbox: (b: [number, number, number, number]) => void;
   searchStale: boolean;
   setSearchStale: (v: boolean) => void;
+  tileVersion: number;
+  bumpTileVersion: () => void;
 
   // Consumer processing state
   activeJobId: string | null;
@@ -141,6 +143,8 @@ export const useStore = create<AppState>((set) => ({
   setSearchBbox: (b) => set({ searchBbox: b, searchStale: false }),
   searchStale: false,
   setSearchStale: (v) => set({ searchStale: v }),
+  tileVersion: 0,
+  bumpTileVersion: () => set((s) => ({ tileVersion: s.tileVersion + 1 })),
 
   activeJobId: null,
   setActiveJobId: (id) => set({ activeJobId: id }),
