@@ -252,13 +252,15 @@ async def get_raster_tile(layer: str, z: int, x: int, y: int):
         if len(data) >= _MIN_PNG_BYTES:
             return Response(content=data, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
         tile_path.unlink(missing_ok=True)
-    # On-the-fly rendering for hillshade/relief layer from seamless VRT mosaic
+    # On-the-fly rendering for hillshade/relief layer from seamless VRT mosaic.
+    # Runs entirely in thread pool so VRT build + rasterio never blocks the
+    # async event loop (which would starve health checks → autoheal kills us).
     if layer == "hillshade":
         try:
             loop = asyncio.get_event_loop()
             png_bytes = await loop.run_in_executor(_relief_pool, _render_relief_tile, z, x, y)
             if png_bytes:
-                _atomic_write(tile_path, png_bytes)
+                await loop.run_in_executor(None, _atomic_write, tile_path, png_bytes)
                 log.info("relief_tile_rendered", z=z, x=x, y=y, bytes=len(png_bytes))
                 return Response(content=png_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
         except Exception as e:
