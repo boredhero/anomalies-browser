@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tests.conftest import PROJECT_ROOT
 from tests.fixtures.synthetic_dem import (
     make_flat_geotiff,
     make_pass_input_from_geotiff,
@@ -282,12 +283,12 @@ class TestMultiReturnPass:
 class TestPassRunnerToml:
     def test_load_cave_config(self):
         from hole_finder.detection.runner import PassRunner
-        runner = PassRunner.from_toml(Path("configs/passes/cave_hunting.toml"))
+        runner = PassRunner.from_toml(PROJECT_ROOT / "configs/passes/cave_hunting.toml")
         assert len(runner.passes) >= 4
 
     def test_load_sinkhole_config(self):
         from hole_finder.detection.runner import PassRunner
-        runner = PassRunner.from_toml(Path("configs/passes/sinkhole_survey.toml"))
+        runner = PassRunner.from_toml(PROJECT_ROOT / "configs/passes/sinkhole_survey.toml")
         assert len(runner.passes) >= 4
 
     def test_cave_config_detects_pit(self):
@@ -295,7 +296,7 @@ class TestPassRunnerToml:
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
-            runner = PassRunner.from_toml(Path("configs/passes/cave_hunting.toml"))
+            runner = PassRunner.from_toml(PROJECT_ROOT / "configs/passes/cave_hunting.toml")
             assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) >= 1
 
     def test_sinkhole_config_detects_pit(self):
@@ -303,7 +304,7 @@ class TestPassRunnerToml:
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_sinkhole_geotiff(d, depth=5.0, radius=15.0), d)
-            runner = PassRunner.from_toml(Path("configs/passes/sinkhole_survey.toml"))
+            runner = PassRunner.from_toml(PROJECT_ROOT / "configs/passes/sinkhole_survey.toml")
             assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) >= 1
 
     def test_no_false_pos_flat(self):
@@ -311,7 +312,7 @@ class TestPassRunnerToml:
         with tempfile.TemporaryDirectory() as d:
             d = Path(d)
             inp = _process_and_load(make_flat_geotiff(d), d)
-            runner = PassRunner.from_toml(Path("configs/passes/sinkhole_survey.toml"))
+            runner = PassRunner.from_toml(PROJECT_ROOT / "configs/passes/sinkhole_survey.toml")
             runner.fuser.min_confidence = 0.5  # higher threshold for near-flat terrain
             assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) == 0
 

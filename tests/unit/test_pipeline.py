@@ -13,6 +13,8 @@ import pytest
 import rasterio
 from shapely.geometry import box
 
+from tests.conftest import PROJECT_ROOT
+
 from tests.fixtures.synthetic_dem import (
     make_flat_geotiff,
     make_pass_input_from_geotiff,
@@ -85,7 +87,7 @@ class TestDetectionOnNativeDerivatives:
             tmpdir = Path(tmpdir)
             dem_path = make_sinkhole_geotiff(tmpdir, depth=5.0, radius=15.0)
             result = ProcessingPipeline(output_dir=tmpdir / "out").process_dem_file(dem_path, force=True)
-            runner = PassRunner.from_toml(Path("configs/passes/cave_hunting.toml"))
+            runner = PassRunner.from_toml(PROJECT_ROOT / "configs/passes/cave_hunting.toml")
             inp = make_pass_input_from_geotiff(dem_path, result.derivative_paths)
             assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) >= 1
 
@@ -97,7 +99,7 @@ class TestDetectionOnNativeDerivatives:
             tmpdir = Path(tmpdir)
             dem_path = make_flat_geotiff(tmpdir)
             result = ProcessingPipeline(output_dir=tmpdir / "out").process_dem_file(dem_path, force=True)
-            runner = PassRunner.from_toml(Path("configs/passes/sinkhole_survey.toml"))
+            runner = PassRunner.from_toml(PROJECT_ROOT / "configs/passes/sinkhole_survey.toml")
             inp = make_pass_input_from_geotiff(dem_path, result.derivative_paths)
             assert len(runner.run_on_array(inp.dem, inp.transform, inp.crs, inp.derivatives)) == 0
 
