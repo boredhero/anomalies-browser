@@ -240,13 +240,15 @@ async def get_composited_terrain_tile(z: int, x: int, y: int):
     if not dem_path and _dem_bounds_cache is not None and len(_dem_bounds_cache) == 0:
         _dem_bounds_cache = None  # force rescan on next call
         dem_path = _find_dem_for_tile(*bbox)
+    log.info("terrain_tile_debug", z=z, x=x, y=y, dem_path=str(dem_path)[:80] if dem_path else "None", cache_size=len(_scan_dem_bounds()))
     if dem_path:
         try:
             png_bytes = _render_terrain_tile_from_dem(dem_path, z, x, y)
             _atomic_write(tile_path, png_bytes)
+            log.info("terrain_rendered_lidar", z=z, x=x, y=y, bytes=len(png_bytes))
             return Response(content=png_bytes, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
         except Exception as e:
-            log.warning("terrain_render_failed", dem=dem_path, z=z, x=x, y=y, error=str(e))
+            log.error("terrain_render_failed", dem=dem_path, z=z, x=x, y=y, error=str(e), error_type=type(e).__name__)
     # 3. Proxy from AWS — don't cache to disk (LiDAR DEM may become available after next scan)
     try:
         resp = await _get_http_client().get(AWS_TERRAIN_URL.format(z=z, x=x, y=y))
