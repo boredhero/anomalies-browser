@@ -233,19 +233,28 @@ Two routes via react-router-dom v7:
 | GET | /api/info | Version info |
 
 ## Current State
-- 798 real detections from Laurel Caverns tile stored in PostGIS
-- 36 validation sites seeded (PA, WV, OH, NY, NC, MD, MA, LA, CA caves + mines + sinkholes)
-- 116+ tests passing on .111
+- 59+ detections stored in PostGIS across Pittsburgh area and other regions
+- 13 LiDAR-visible validation sites (wild caves, exposed mine portals, sinkholes — no commercialized tourist caves)
+- 1 field-verified discovery: Allegheny Cemetery Cave (undocumented cave entrance found via LiDAR + ground-truthed 2026-04-02)
+- 177 tests passing on .111 (unit + validation framework)
 - Both domains live with TLS
-- 1 COPC tile downloaded and processed (28.2M points → 1500x1500 DEM → 11 derivatives → detections)
-- Derivatives compute in 1.6s (parallel native), detection in ~66s (7 passes)
+- Multiple COPC tiles processed per scan (12 tile limit, 6 parallel, ~15s/tile PDAL + ~3s detection)
+- Derivatives compute in ~0.3s (parallel native), detection passes in ~3-8s (7 passes, pre-filter + DBSCAN fusion ~0.3s)
+- Robust CRS handling: compound CRS (UTM+NAVD88) resolved via pyproj sub_crs extraction, PROJ_NETWORK=OFF prevents grid pipeline infinity bug in Celery workers
+- Overpass API: shared client with httpx-retries, 4-mirror rotation, 7-day file cache, threading rate limiter
+- Fill depressions: 3-tier fallback (WBT default → WBT breach_depressions_least_cost → WBT Planchon-Darboux → skimage morphological reconstruction)
+- PDAL: filters.assign normalizes zeroed return values before SMRF (fixes NC NOAA tiles)
 - Consumer "Find a Hole Near Me" flow with zip code fallback, auto-processing, and guided tour
-- MVT vector tiles for fast map rendering at any scale
-- WebSocket real-time job progress with stage reporting
+- MVT vector tiles with no-store caching + tileVersion cache busting on scan completion
+- WebSocket real-time job progress with per-tile download MB and stage reporting
+- Viewport-based scan: "Search this area" scans exactly what's visible, warns if viewport too wide
+- Adaptive zoom filter: low zoom shows only high-confidence, high zoom reveals everything (progressive disclosure)
+- Per-phase timing logs: tile_phase_timing, tile_quality_report, pipeline_error_summary for every job
 
 ## What's NOT Done Yet
-- Only 1 tile processed — need to process more regions
-- ML models not trained (RF, UNet, YOLO) — infrastructure ready, need training data
-- Consumer auto-processing flow not end-to-end tested in production (Celery + WebSocket)
-- Performance: detection loop (66s) could be faster with vectorized morphometrics
-- httpx not in Docker image deps yet (needed for geocode proxy)
+- ML models not trained (RF, UNet, YOLO) — infrastructure ready, need training data from 13 validation sites + PASDA karst ground truth
+- Overpass API latency: 5-107s for first-scan building/infra filter. Cache helps on repeats. Long-term: Geofabrik PBF extracts or Microsoft Building Footprints as static dataset
+- PDAL DEM generation is 65% of tile wall time (~15s) — exploring threading and alternative interpolation
+- 3D terrain tiles and tile coverage overlay may not refresh after new scan (possible frontend caching issue)
+- Lazy outline polygonization (skip rasterio_shapes during detection, compute on-demand) — ~350ms/tile savings
+- All detections currently typed as DEPRESSION — morphometric_filter classification may need tuning
