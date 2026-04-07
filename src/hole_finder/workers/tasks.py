@@ -323,27 +323,33 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
             source = get_source(dl_source_name)
             dest = settings.raw_dir / dl_source_name
 
+            _dl_done = 0
+            _dl_bytes = 0
+            _dl_lock = asyncio.Lock() if hasattr(asyncio, 'Lock') else None
+
             async def _download_all():
                 import asyncio as aio
-                sem = aio.Semaphore(16)  # 16 concurrent downloads (~678 Mbps available)
-                results = []
-
+                nonlocal _dl_done, _dl_bytes
+                sem = aio.Semaphore(16)
                 async def _dl(tile, idx):
+                    nonlocal _dl_done, _dl_bytes
                     async with sem:
                         t0 = time.perf_counter()
                         try:
                             path = await source.download_tile(tile, dest)
                             elapsed = time.perf_counter() - t0
                             size_bytes = Path(path).stat().st_size if path else 0
-                            log.info("tile_downloaded", tile=tile.filename,
-                                     elapsed_s=round(elapsed, 2), index=idx+1,
-                                     size_mb=round(size_bytes / 1e6, 1))
+                            _dl_done += 1
+                            _dl_bytes += size_bytes
+                            dl_so_far = round(_dl_bytes / 1e6, 1)
+                            log.info("tile_downloaded", tile=tile.filename, elapsed_s=round(elapsed, 2), index=_dl_done, size_mb=round(size_bytes / 1e6, 1), total_so_far_mb=dl_so_far)
+                            pct = 10 + (_dl_done / tile_limit) * 30
+                            _update_job("RUNNING", pct, f"Downloading {_dl_done}/{tile_limit} tiles ({dl_so_far} MB)", stage="downloading", summary={"stage": "downloading", "source": source_name, "download_mb": dl_so_far, "downloaded": _dl_done, "tile_limit": tile_limit})
                             return (str(path), size_bytes)
                         except Exception as e:
-                            log.warning("tile_download_failed",
-                                        tile=tile.filename, error=str(e))
+                            _dl_done += 1
+                            log.warning("tile_download_failed", tile=tile.filename, error=str(e))
                             return None
-
                 tasks = [_dl(tile, i) for i, tile in enumerate(tiles[:tile_limit])]
                 results = await aio.gather(*tasks)
                 return [(p, s) for p, s in [r for r in results if r is not None]]

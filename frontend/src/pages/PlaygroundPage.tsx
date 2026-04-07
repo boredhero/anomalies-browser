@@ -89,10 +89,10 @@ export default function PlaygroundPage() {
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-30 bg-slate-800/95 backdrop-blur text-white text-sm px-6 py-3 rounded shadow-lg flex items-center gap-3">
           <Loader2 size={16} className="animate-spin text-cherry-400" />
           <span>
-            {jobProgress.stage === 'downloading' ? 'Downloading tiles' : jobProgress.stage === 'analyzing' ? 'Analyzing terrain' : jobProgress.stage === 'finishing' ? 'Finishing up' : 'Processing'}
-            {jobProgress.progress > 0 && <span className="text-slate-400 ml-1">({Math.round(jobProgress.progress)}%)</span>}
+            {jobProgress.stage === 'downloading' ? 'Downloading LiDAR data' : jobProgress.stage === 'analyzing' ? 'Analyzing terrain' : jobProgress.stage === 'finishing' ? 'Finishing up' : 'Processing'}
+            {jobProgress.downloadMb != null && jobProgress.stage === 'downloading' && <span className="text-slate-400 ml-1">({jobProgress.downloadMb} MB)</span>}
+            {jobProgress.stage !== 'downloading' && jobProgress.progress > 0 && <span className="text-slate-400 ml-1">({Math.round(jobProgress.progress)}%)</span>}
           </span>
-          {jobProgress.source && <span className="text-slate-500">· {jobProgress.source}</span>}
         </div>
       )}
       {/* Done banner */}
