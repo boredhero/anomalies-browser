@@ -15,11 +15,11 @@ Processes free, publicly available LiDAR elevation data (USGS 3DEP, PASDA, state
 
 ### Consumer Experience
 
-"Find a Hole Near Me" — enter your zip code or share your location, and the system automatically downloads and processes nearby LiDAR terrain data in under 5 minutes. An animated loading screen shows progress with rotating fun facts about caves and geology. When done, you're taken on a Tinder-style guided tour of the most interesting finds, swiping through detection cards while the map flies to each one.
+"Find a Hole Near Me" — enter your zip code or share your location, and the system automatically downloads and processes nearby LiDAR terrain data in under 5 minutes. An animated loading screen shows real-time download progress (MB downloaded) and processing stages. When done, you're taken on a Tinder-style guided tour of the most interesting finds, swiping through detection cards while the map flies to each one.
 
 ### Advanced Playground
 
-Full-featured interface at `/playground` with sidebar filtering by feature type and confidence, job management for processing entire regions, validation workflows, comments, and heatmap overlays.
+Full-featured interface at `/playground` with "Search this area" — scans exactly what's visible in the viewport. Sidebar filtering by feature type and confidence with zoom-adaptive visibility (zoomed in = more detections shown). Job management, validation workflows, comments, 3D terrain, and heatmap overlays.
 
 ## Architecture
 
@@ -176,13 +176,15 @@ Full-featured interface at `/playground` with sidebar filtering by feature type 
 
 ## Tech Stack
 
-**Backend:** Python 3.12, FastAPI, SQLAlchemy + GeoAlchemy2, PostGIS, Celery + Redis, PDAL
+**Backend:** Python 3.13, FastAPI, SQLAlchemy + GeoAlchemy2, asyncpg, PostGIS 16, Celery + Redis, PDAL 2.10, GDAL 3.12, WhiteboxTools
 
 **Frontend:** React + TypeScript, MapLibre GL JS (MVT vector tiles), deck.gl (heatmap), framer-motion (swipe cards), Zustand, TanStack Query, Tailwind CSS v4
 
-**ML:** scikit-learn (Random Forest), PyTorch + ROCm (U-Net, YOLOv8)
+**ML:** scikit-learn (Random Forest), PyTorch + ROCm 7.2 (U-Net, YOLOv8) — infrastructure ready, models not yet trained
 
-**Infrastructure:** Docker, GitHub Actions CI/CD, nginx reverse proxy
+**Resilience:** httpx-retries with 4 Overpass API mirror rotation, 7-day file cache, robust CRS handling for compound CRS (UTM+NAVD88), 3-tier fill_depressions fallback (WBT → WBT Planchon-Darboux → skimage)
+
+**Infrastructure:** Docker (pdal/pdal:latest base), GitHub Actions CI/CD, nginx reverse proxy, Ryzen 5800X3D compute node
 
 ## API
 
@@ -209,7 +211,7 @@ Interactive API docs available at `/api/docs` (Swagger UI) when running locally.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/geocode?zip=15208` | Zip code geocoding via US Census Bureau (server-side proxy) |
-| POST | `/api/explore/scan` | Start auto-processing job near a location (3km radius, 4 tile cap, < 5 min) |
+| POST | `/api/explore/scan` | Start auto-processing job for viewport area (radius derived from viewport, 12 tile cap) |
 
 ### Job Management
 
@@ -248,7 +250,7 @@ cd anomalies-browser
 
 # Backend
 uv sync --extra dev
-uv run pytest tests/unit/ -v     # 126 tests
+uv run pytest tests/unit/ -v     # 177 tests
 
 # Frontend
 cd frontend && pnpm install && pnpm dev
@@ -266,7 +268,7 @@ All data sources are free and require no API keys:
 
 ## Validation
 
-36 known cave, mine, sinkhole, and lava tube sites with GPS coordinates across PA, WV, OH, NY, NC, MD, MA, LA, and CA used as ground truth. Bulk validation against 111,000+ PASDA karst features, 11,249 PA abandoned mines, and USGS MRDS records across all target states.
+13 LiDAR-visible validation sites with natural exposed entrances across PA, WV, NC, MA, LA, and CA — wild caves, exposed mine portals, and open sinkholes. Commercialized show caves with buildings over entrances were intentionally excluded (LiDAR sees rooftops, not cave mouths). Includes 1 field-verified discovery: an undocumented cave entrance in Allegheny Cemetery, Pittsburgh (ground-truthed April 2026). Bulk validation against 111,000+ PASDA karst features, 11,249 PA abandoned mines, and USGS MRDS records across all target states.
 
 ## License
 
