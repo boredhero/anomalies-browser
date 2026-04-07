@@ -5,6 +5,15 @@ from pathlib import Path
 
 import pytest
 
+# Resolve project root from this file's location (tests/conftest.py → project root)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture
+def configs_dir():
+    """Absolute path to configs/ directory — use instead of relative Path('configs/...')."""
+    return PROJECT_ROOT / "configs"
+
 
 @pytest.fixture(autouse=True)
 def ensure_passes_registered():
