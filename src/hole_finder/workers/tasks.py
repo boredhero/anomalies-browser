@@ -325,7 +325,6 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
 
             _dl_done = 0
             _dl_bytes = 0
-            _dl_lock = asyncio.Lock() if hasattr(asyncio, 'Lock') else None
 
             async def _download_all():
                 import asyncio as aio
@@ -343,8 +342,17 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
                             _dl_bytes += size_bytes
                             dl_so_far = round(_dl_bytes / 1e6, 1)
                             log.info("tile_downloaded", tile=tile.filename, elapsed_s=round(elapsed, 2), index=_dl_done, size_mb=round(size_bytes / 1e6, 1), total_so_far_mb=dl_so_far)
-                            pct = 10 + (_dl_done / tile_limit) * 30
-                            _update_job("RUNNING", pct, f"Downloading {_dl_done}/{tile_limit} tiles ({dl_so_far} MB)", stage="downloading", summary={"stage": "downloading", "source": source_name, "download_mb": dl_so_far, "downloaded": _dl_done, "tile_limit": tile_limit})
+                            # Update job progress directly via async session (can't use _update_job here — it calls asyncio.run() which fails inside an existing event loop)
+                            try:
+                                async with _async_session() as session:
+                                    job = await session.get(Job, UUID(job_id))
+                                    if job:
+                                        pct = 10 + (_dl_done / tile_limit) * 30
+                                        job.progress = pct
+                                        job.result_summary = {"stage": "downloading", "source": source_name, "download_mb": dl_so_far, "downloaded": _dl_done, "tile_limit": tile_limit}
+                                        await session.commit()
+                            except Exception:
+                                pass  # non-fatal — progress display only
                             return (str(path), size_bytes)
                         except Exception as e:
                             _dl_done += 1
