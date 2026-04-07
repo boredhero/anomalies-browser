@@ -92,6 +92,40 @@ class TestOverpassMirrorRotation:
             mock_set.assert_called_once()
 
 
+class TestOverpassMirrorFallback:
+    """When the first mirror fails, the client should try the next one."""
+
+    @patch("hole_finder.utils.overpass._rate_limit")
+    @patch("hole_finder.utils.overpass._get_cached", return_value=None)
+    @patch("hole_finder.utils.overpass._set_cached")
+    def test_first_mirror_fails_second_succeeds(self, mock_set, mock_get, mock_rate):
+        """If the first mirror returns 429, the second mirror should be tried and succeed."""
+        from hole_finder.utils import overpass
+        call_count = 0
+        def mock_post(url, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            resp = MagicMock()
+            if call_count <= 3:  # First mirror: all 3 retries fail (httpx-retries handles this internally, but we simulate post-retry failure)
+                resp.raise_for_status.side_effect = Exception("429 Too Many Requests")
+                raise Exception("429 Too Many Requests")
+            # Second mirror: success
+            resp.status_code = 200
+            resp.json.return_value = {"elements": [{"type": "way", "id": 42}]}
+            resp.content = b'{"elements": [{"type": "way", "id": 42}]}'
+            resp.raise_for_status = MagicMock()
+            return resp
+        with patch("httpx.Client") as MockClient:
+            mock_instance = MagicMock()
+            mock_instance.__enter__ = MagicMock(return_value=mock_instance)
+            mock_instance.__exit__ = MagicMock(return_value=False)
+            mock_instance.post.side_effect = mock_post
+            MockClient.return_value = mock_instance
+            result = overpass.query_overpass("test query", timeout=5.0, query_label="test")
+        assert result["elements"][0]["id"] == 42
+        mock_set.assert_called_once()  # successful response was cached
+
+
 class TestOverpassRateLimiter:
     """Rate limiter prevents burst requests."""
 

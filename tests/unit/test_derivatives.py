@@ -223,6 +223,42 @@ class TestFillDifference:
             assert fd.max() < 0.5
 
 
+# --- Fill Depressions Fallback ---
+
+class TestFillDepressionsFallback:
+    """Test that fill_depressions falls back to skimage when WBT fails."""
+
+    def test_skimage_fallback_produces_valid_output(self):
+        """When all WBT methods fail, skimage reconstruction should produce a filled DEM."""
+        from unittest.mock import patch, MagicMock
+        with tempfile.TemporaryDirectory() as d:
+            d = Path(d)
+            dem_path = make_sinkhole_geotiff(d, depth=5.0, radius=12.0, size=100)
+            out_path = d / "filled.tif"
+            # Mock WBT to always fail (return nonzero and no output file)
+            mock_wbt = MagicMock()
+            mock_wbt.fill_depressions.return_value = 1
+            mock_wbt.breach_depressions_least_cost.return_value = 1
+            mock_wbt.fill_depressions_planchon_and_darboux.return_value = 1
+            with patch("hole_finder.processing.derivatives._get_wbt", return_value=mock_wbt):
+                from hole_finder.processing.derivatives import fill_depressions
+                result_path, elapsed = fill_depressions(str(dem_path), str(out_path))
+            assert Path(result_path).exists(), "Fallback should produce output file"
+            # Verify the filled DEM has higher or equal values everywhere (depressions filled up)
+            import rasterio
+            import numpy as np
+            with rasterio.open(dem_path) as src:
+                original = src.read(1)
+            with rasterio.open(result_path) as src:
+                filled = src.read(1)
+            # Filled DEM values should be >= original (depressions raised, not lowered)
+            diff = filled - original
+            assert diff.min() >= -0.01, f"Filled DEM has values BELOW original by {diff.min():.3f}m — not a valid depression fill"
+            # The sinkhole center should have been raised
+            center = original.shape[0] // 2
+            assert filled[center, center] > original[center, center], "Sinkhole center should be raised by fill"
+
+
 # --- All Derivatives ---
 
 class TestAllDerivatives:
