@@ -92,7 +92,7 @@ async def get_vector_tile(
         content=bytes(mvt_data),
         media_type="application/x-protobuf",
         headers={
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": "no-store",
             "Access-Control-Allow-Origin": "*",
         },
     )

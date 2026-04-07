@@ -26,6 +26,7 @@ export default function LandingPage() {
   const setTargetViewState = useStore((s) => s.setTargetViewState);
   const setUserLocation = useStore((s) => s.setUserLocation);
   const setSearchStale = useStore((s) => s.setSearchStale);
+  const bumpTileVersion = useStore((s) => s.bumpTileVersion);
   const setTerrainReady = useStore((s) => s.setTerrainReady);
   const userLocation = useStore((s) => s.userLocation);
   const activeJobId = useStore((s) => s.activeJobId);
@@ -104,6 +105,7 @@ export default function LandingPage() {
     if (status !== 'COMPLETED' && status !== 'FAILED') return;
     completionHandled.current = true;
     console.log('[HoleFinder] Job finished:', status);
+    bumpTileVersion();
     if (status === 'FAILED') return;
     const center = scanCenter.current;
     if (!center) {

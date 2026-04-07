@@ -277,7 +277,7 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
             ctx["tiles_found"] = len(tiles)
 
         if not tiles:
-            _update_job("FAILED", 0, "No LiDAR data available for this area. Try a different location — coverage varies.", summary={"tiles": 0, "detections": 0})
+            _update_job("FAILED", 0, "No LiDAR data found in this area. Try zooming out to a larger area or panning to a different location.", summary={"tiles": 0, "detections": 0})
             return
 
         # Compute tile limit early — needed for stale clearing and download
@@ -323,27 +323,33 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
             source = get_source(dl_source_name)
             dest = settings.raw_dir / dl_source_name
 
+            _dl_done = 0
+            _dl_bytes = 0
+            _dl_lock = asyncio.Lock() if hasattr(asyncio, 'Lock') else None
+
             async def _download_all():
                 import asyncio as aio
-                sem = aio.Semaphore(16)  # 16 concurrent downloads (~678 Mbps available)
-                results = []
-
+                nonlocal _dl_done, _dl_bytes
+                sem = aio.Semaphore(16)
                 async def _dl(tile, idx):
+                    nonlocal _dl_done, _dl_bytes
                     async with sem:
                         t0 = time.perf_counter()
                         try:
                             path = await source.download_tile(tile, dest)
                             elapsed = time.perf_counter() - t0
                             size_bytes = Path(path).stat().st_size if path else 0
-                            log.info("tile_downloaded", tile=tile.filename,
-                                     elapsed_s=round(elapsed, 2), index=idx+1,
-                                     size_mb=round(size_bytes / 1e6, 1))
+                            _dl_done += 1
+                            _dl_bytes += size_bytes
+                            dl_so_far = round(_dl_bytes / 1e6, 1)
+                            log.info("tile_downloaded", tile=tile.filename, elapsed_s=round(elapsed, 2), index=_dl_done, size_mb=round(size_bytes / 1e6, 1), total_so_far_mb=dl_so_far)
+                            pct = 10 + (_dl_done / tile_limit) * 30
+                            _update_job("RUNNING", pct, f"Downloading {_dl_done}/{tile_limit} tiles ({dl_so_far} MB)", stage="downloading", summary={"stage": "downloading", "source": source_name, "download_mb": dl_so_far, "downloaded": _dl_done, "tile_limit": tile_limit})
                             return (str(path), size_bytes)
                         except Exception as e:
-                            log.warning("tile_download_failed",
-                                        tile=tile.filename, error=str(e))
+                            _dl_done += 1
+                            log.warning("tile_download_failed", tile=tile.filename, error=str(e))
                             return None
-
                 tasks = [_dl(tile, i) for i, tile in enumerate(tiles[:tile_limit])]
                 results = await aio.gather(*tasks)
                 return [(p, s) for p, s in [r for r in results if r is not None]]
@@ -463,14 +469,14 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
                 log.info("crs_transform_ok", crs=crs_code, test_point=f"({round(_test_lon,4)},{round(_test_lat,4)})")
 
                 good = [c for c in candidates
-                        if c.score > 0.3
-                        and c.morphometrics.get("area_m2", 0) > 50
-                        and c.morphometrics.get("depth_m", 0) > 0.5
+                        if c.score > 0.15
+                        and c.morphometrics.get("area_m2", 0) > 20
+                        and c.morphometrics.get("depth_m", 0) > 0.3
                         and (c.morphometrics.get("depth_m", 0)
-                             or c.morphometrics.get("lrm_anomaly_m", 0)) < 100]
+                             or c.morphometrics.get("lrm_anomaly_m", 0)) < 150]
                 log.info("detection_filtered", tile=Path(tile_path).stem, after_filter=len(good), before_filter=len(candidates))
                 good.sort(key=lambda c: c.score, reverse=True)
-                good = good[:50]
+                good = good[:200]
 
                 # Transform centroids to WGS84, discard any with infinity/NaN coords
                 wgs84_points = []

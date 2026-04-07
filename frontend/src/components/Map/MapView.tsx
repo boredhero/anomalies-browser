@@ -185,6 +185,7 @@ function FlyToHandler() {
 function MVTLayerManager() {
   const { current: mapRef } = useMap();
   const showGroundTruth = useStore((s) => s.showGroundTruth);
+  const tileVersion = useStore((s) => s.tileVersion);
   const setSelectedDetection = useStore((s) => s.setSelectedDetection);
   const setDrawerState = useStore((s) => s.setDrawerState);
   const setSidebarOpen = useStore((s) => s.setSidebarOpen);
@@ -208,13 +209,14 @@ function MVTLayerManager() {
         source: 'detections-mvt',
         'source-layer': 'detections',
         // Zoom-dependent confidence filter: at low zoom only show high-confidence,
-        // progressively reveal lower-confidence detections as user zooms in
+        // progressively reveal lower-confidence detections as user zooms in.
+        // More lenient at high zoom so zoomed-in users see everything in their viewport.
         filter: ['>=', ['get', 'confidence'],
           ['step', ['zoom'],
-            0.7,      // zoom < 12: only high confidence
-            12, 0.6,  // zoom 12–14: medium-high
-            14, 0.5,  // zoom 14–16: medium
-            16, 0.3,  // zoom 16+: show all
+            0.7,      // zoom < 11: only high confidence (wide view)
+            11, 0.5,  // zoom 11–13: medium
+            13, 0.3,  // zoom 13–15: most detections
+            15, 0.15, // zoom 15+: show everything stored
           ],
         ],
         paint: {
@@ -407,6 +409,19 @@ function MVTLayerManager() {
     });
   }, [mapRef, addMVTLayers, setSelectedDetection, setDrawerState, setSidebarOpen]);
 
+  // Force MVT tile reload when tileVersion bumps (after scan completion)
+  useEffect(() => {
+    if (tileVersion === 0) return; // skip initial
+    const map = mapRef?.getMap();
+    if (!map) return;
+    const src = map.getSource('detections-mvt') as any;
+    if (src) {
+      // Update tile URL with cache-busting param and reload
+      src.setTiles([`${window.location.origin}/api/tiles/{z}/{x}/{y}.mvt?min_confidence=0.3&v=${tileVersion}`]);
+      console.log('[MVT] Tile cache busted, version:', tileVersion);
+    }
+  }, [tileVersion, mapRef]);
+
   // Toggle ground truth visibility
   useEffect(() => {
     const map = mapRef?.getMap();
@@ -548,7 +563,7 @@ function CoordinateCopy() {
   );
 }
 
-const DEFAULT_VIEW = { longitude: -79.71, latitude: 39.80, zoom: 13, pitch: 45, bearing: -15 };
+const DEFAULT_VIEW = { longitude: -79.96, latitude: 40.50, zoom: 10, pitch: 45, bearing: -15 };
 
 export default function MapView() {
   const basemap = useStore((s) => s.basemap);

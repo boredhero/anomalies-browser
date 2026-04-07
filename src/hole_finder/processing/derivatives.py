@@ -160,18 +160,42 @@ def compute_fill_difference(dem: str, filled: str, out: str) -> str:
 def fill_depressions(dem: str, out: str) -> str:
     wbt = _get_wbt()
     ret = wbt.fill_depressions(dem, out)
-    try:
-        _wbt_check(ret, "fill_depressions", out, dem_input=dem)
-    except RuntimeError:
-        # GDAL fallback: use gdal_fillnodata as a rough approximation.
-        # Less accurate than WBT depression filling but prevents total tile loss.
-        log.warning("fill_depressions_gdal_fallback", dem=dem, out=out)
-        import shutil
-        shutil.copy2(dem, out)
-        result = subprocess.run(["gdal_fillnodata.py", "-md", "100", "-si", "1", "-co", "COMPRESS=DEFLATE", "-co", "TILED=YES", out], capture_output=True, text=True, timeout=300)
-        if result.returncode != 0 or not Path(out).exists():
-            raise RuntimeError(f"GDAL fill_depressions fallback also failed (exit {result.returncode}): {result.stderr[:300]}")
-        log.info("fill_depressions_gdal_ok", out=out)
+    if ret == 0 and Path(out).exists():
+        return out
+    log.warning("fill_depressions_primary_failed", dem=dem, ret=ret, output_exists=Path(out).exists())
+    # Fallback 1: WBT breach_depressions_least_cost (different Rust code path, WBT-recommended)
+    if hasattr(wbt, 'breach_depressions_least_cost'):
+        ret = wbt.breach_depressions_least_cost(dem, out, dist=100, fill=True)
+        if ret == 0 and Path(out).exists():
+            log.info("fill_depressions_breach_ok", dem=dem)
+            return out
+    # Fallback 2: WBT Planchon-Darboux (completely different algorithm)
+    if hasattr(wbt, 'fill_depressions_planchon_and_darboux'):
+        ret = wbt.fill_depressions_planchon_and_darboux(dem, out, fix_flats=True)
+        if ret == 0 and Path(out).exists():
+            log.info("fill_depressions_planchon_ok", dem=dem)
+            return out
+    # Fallback 3: skimage morphological reconstruction (Planchon-Darboux equivalent, no new deps)
+    log.warning("fill_depressions_skimage_fallback", dem=dem)
+    import numpy as np
+    import rasterio
+    from skimage.morphology import reconstruction
+    with rasterio.open(dem) as src:
+        dem_arr = src.read(1).astype(np.float64)
+        profile = src.profile.copy()
+        nodata = profile.get('nodata', -9999)
+    nodata_mask = np.isnan(dem_arr) | (dem_arr == nodata)
+    seed = np.full_like(dem_arr, dem_arr[~nodata_mask].max() if not nodata_mask.all() else 0)
+    seed[0, :] = dem_arr[0, :]
+    seed[-1, :] = dem_arr[-1, :]
+    seed[:, 0] = dem_arr[:, 0]
+    seed[:, -1] = dem_arr[:, -1]
+    seed[nodata_mask] = dem_arr[nodata_mask]
+    filled = reconstruction(seed, dem_arr, method='erosion')
+    profile.update(dtype="float32", compress="deflate", tiled=True, blockxsize=256, blockysize=256)
+    with rasterio.open(out, "w", **profile) as dst:
+        dst.write(filled.astype(np.float32), 1)
+    log.info("fill_depressions_skimage_ok", dem=dem, out=out)
     return out
 
 

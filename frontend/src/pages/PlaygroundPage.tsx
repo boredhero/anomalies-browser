@@ -12,6 +12,7 @@ export default function PlaygroundPage() {
   const bbox = useStore((s) => s.bbox);
   const searchStale = useStore((s) => s.searchStale);
   const setSearchStale = useStore((s) => s.setSearchStale);
+  const bumpTileVersion = useStore((s) => s.bumpTileVersion);
   const activeJobId = useStore((s) => s.activeJobId);
   const setActiveJobId = useStore((s) => s.setActiveJobId);
   const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'done' | 'failed'>('idle');
@@ -28,6 +29,7 @@ export default function PlaygroundPage() {
       setScanStatus('done');
       setActiveJobId(null);
       setSearchStale(true);
+      bumpTileVersion();
       // Auto-dismiss after 4s
       setTimeout(() => setScanStatus('idle'), 4000);
     } else if (jobProgress.status === 'FAILED') {
@@ -41,10 +43,21 @@ export default function PlaygroundPage() {
     if (!bbox) return;
     const lat = (bbox[1] + bbox[3]) / 2;
     const lon = (bbox[0] + bbox[2]) / 2;
+    // Derive radius from viewport — what you see is what gets scanned
+    const latSpanKm = (bbox[3] - bbox[1]) * 111.32;
+    const lonSpanKm = (bbox[2] - bbox[0]) * 111.32 * Math.cos(lat * Math.PI / 180);
+    const radiusKm = Math.min(latSpanKm, lonSpanKm) / 2;
+    // If viewport is too wide, ask user to zoom in
+    if (radiusKm > 10) {
+      setScanError('Zoom in a bit — the visible area is too large to scan. Try zoom 12 or higher.');
+      setScanStatus('failed');
+      setTimeout(() => setScanStatus('idle'), 5000);
+      return;
+    }
     setScanStatus('scanning');
     setScanError(null);
     try {
-      const { job_id } = await startConsumerScan(lat, lon, 10);
+      const { job_id } = await startConsumerScan(lat, lon, Math.max(0.5, radiusKm));
       setActiveJobId(job_id);
     } catch (err: any) {
       setScanError(err?.message || 'Failed to start scan');
@@ -76,10 +89,10 @@ export default function PlaygroundPage() {
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-30 bg-slate-800/95 backdrop-blur text-white text-sm px-6 py-3 rounded shadow-lg flex items-center gap-3">
           <Loader2 size={16} className="animate-spin text-cherry-400" />
           <span>
-            {jobProgress.stage === 'downloading' ? 'Downloading tiles' : jobProgress.stage === 'analyzing' ? 'Analyzing terrain' : jobProgress.stage === 'finishing' ? 'Finishing up' : 'Processing'}
-            {jobProgress.progress > 0 && <span className="text-slate-400 ml-1">({Math.round(jobProgress.progress)}%)</span>}
+            {jobProgress.stage === 'downloading' ? 'Downloading LiDAR data' : jobProgress.stage === 'analyzing' ? 'Analyzing terrain' : jobProgress.stage === 'finishing' ? 'Finishing up' : 'Processing'}
+            {jobProgress.downloadMb != null && jobProgress.stage === 'downloading' && <span className="text-slate-400 ml-1">({jobProgress.downloadMb} MB)</span>}
+            {jobProgress.stage !== 'downloading' && jobProgress.progress > 0 && <span className="text-slate-400 ml-1">({Math.round(jobProgress.progress)}%)</span>}
           </span>
-          {jobProgress.source && <span className="text-slate-500">· {jobProgress.source}</span>}
         </div>
       )}
       {/* Done banner */}
