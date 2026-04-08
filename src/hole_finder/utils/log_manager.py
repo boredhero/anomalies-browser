@@ -4,16 +4,24 @@ Singleton logger that writes structured key=value logs to:
   /data/hole-finder/logs/YYYY-MM-DD.log (persistent across restarts)
   + stderr (captured by Docker)
 
+Every log line includes a correlation ID when available:
+  - API requests: 8-char hex hash set by RequestLoggingMiddleware
+  - Celery tasks: Celery task ID (truncated to 8 chars)
+  - CLI: "cli" literal
+
 Usage:
   from hole_finder.utils.log_manager import log
   log.info("tile_processed", tile_id="ABC123", elapsed_s=1.5)
   log.error("pipeline_failed", error=str(e), tile_id="ABC123")
 """
 
+import contextvars
+import hashlib
 import logging
 import os
 import sys
 import threading
+import time
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
@@ -21,6 +29,27 @@ EASTERN = timezone(timedelta(hours=-5))
 LOG_DIR = Path(os.environ.get("HOLEFINDER_LOG_DIR", "/data/hole-finder/logs"))
 _lock = threading.Lock()
 _instance = None
+
+# ── Correlation ID propagation ──────────────────────────────────────────
+# Set once per request/task, automatically included in every log line.
+# Works across async awaits (contextvars) and in sync Celery workers.
+request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="")
+
+
+def generate_request_id() -> str:
+    """Generate an 8-char hex hash for request correlation."""
+    raw = f"{time.time_ns()}{threading.current_thread().ident}"
+    return hashlib.sha256(raw.encode()).hexdigest()[:8]
+
+
+def set_request_id(rid: str) -> contextvars.Token:
+    """Set the correlation ID for the current context. Returns a reset token."""
+    return request_id_var.set(rid)
+
+
+def get_request_id() -> str:
+    """Get the current correlation ID (empty string if none set)."""
+    return request_id_var.get()
 
 
 class _EasternFormatter(logging.Formatter):
@@ -75,7 +104,7 @@ class _DateFileHandler(logging.Handler):
 
 
 class LogManager:
-    """Structured logger with date-based file output and console output."""
+    """Structured logger with date-based file output, console output, and correlation IDs."""
     def __init__(self):
         self._process_type = _detect_process_type()
         self._logger = logging.getLogger("holefinder")
@@ -97,7 +126,11 @@ class LogManager:
             console.stream.write(f"[log_manager] File handler failed: {e}\n")
 
     def _format_msg(self, event: str, **kwargs) -> str:
-        parts = [f"proc={self._process_type}", f"event={event}"]
+        rid = request_id_var.get()
+        parts = [f"proc={self._process_type}"]
+        if rid:
+            parts.append(f"rid={rid}")
+        parts.append(f"event={event}")
         for k, v in kwargs.items():
             if isinstance(v, float):
                 v = round(v, 3)
