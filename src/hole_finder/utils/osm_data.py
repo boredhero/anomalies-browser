@@ -105,12 +105,12 @@ def _extract_geojson(west: float, south: float, east: float, north: float, confi
         # Step 1: Extract bbox from PBF
         extract_cmd = ["osmium", "extract", "--bbox", f"{west},{south},{east},{north}", "--strategy=smart", "--overwrite", "-o", str(clip_path), str(PBF_PATH)]
         try:
-            result = subprocess.run(extract_cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(extract_cmd, capture_output=True, text=True, timeout=180)
             if result.returncode != 0:
                 log.error("osmium_extract_failed", returncode=result.returncode, stderr=result.stderr[:500])
                 return None
         except subprocess.TimeoutExpired:
-            log.error("osmium_extract_timeout", bbox=f"{west},{south},{east},{north}")
+            log.error("osmium_extract_timeout", bbox=f"{west},{south},{east},{north}", timeout_s=180)
             return None
         except FileNotFoundError:
             log.error("osmium_not_installed", hint="apt-get install osmium-tool")
@@ -118,7 +118,7 @@ def _extract_geojson(west: float, south: float, east: float, north: float, confi
         # Step 2: Export to GeoJSON with tag filter
         export_cmd = ["osmium", "export", "--config", str(config_path), "--overwrite", "-o", str(geojson_path), "-f", "geojson", str(clip_path)]
         try:
-            result = subprocess.run(export_cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(export_cmd, capture_output=True, text=True, timeout=60)
             if result.returncode != 0:
                 log.error("osmium_export_failed", config=config_name, returncode=result.returncode, stderr=result.stderr[:500])
                 return None
