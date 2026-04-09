@@ -219,6 +219,7 @@ function FlyToHandler() {
 /** Adds MVT vector tile layers for detections + ground truth. Re-adds after basemap change. */
 function MVTLayerManager() {
   const { current: mapRef } = useMap();
+  const basemap = useStore((s) => s.basemap);
   const showGroundTruth = useStore((s) => s.showGroundTruth);
   const tileVersion = useStore((s) => s.tileVersion);
   const setSelectedDetection = useStore((s) => s.setSelectedDetection);
@@ -466,6 +467,32 @@ function MVTLayerManager() {
       console.log('[MVT] Tile cache busted, version:', tileVersion);
     }
   }, [tileVersion, mapRef]);
+
+  // Explicit re-add after basemap change. style.load + rAF alone isn't reliable
+  // because react-map-gl's internal style reconciliation can run AFTER our rAF
+  // callback, wiping out layers we just added. This belt-and-suspenders approach
+  // waits 300ms for everything to settle, then forces re-add.
+  useEffect(() => {
+    const map = mapRef?.getMap();
+    if (!map) return;
+    const timer = setTimeout(() => {
+      try {
+        const doAdd = () => {
+          if (!map.getSource('relief-hillshade')) {
+            try { map.addSource('relief-hillshade', RELIEF_SOURCE); map.addLayer({ id: 'relief-hillshade', type: 'raster', source: 'relief-hillshade', paint: { 'raster-opacity': 0.35 } }); } catch { /* exists */ }
+          }
+          addMVTLayers(map);
+          console.log('[MVT] Re-added after basemap change to:', basemap);
+        };
+        if (map.isStyleLoaded()) {
+          doAdd();
+        } else {
+          map.once('style.load', doAdd);
+        }
+      } catch { /* style transition race */ }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [basemap, mapRef, addMVTLayers]);
 
   // Toggle ground truth visibility
   useEffect(() => {
