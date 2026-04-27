@@ -508,6 +508,11 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
                 _t = time.perf_counter()
                 crs_code = tile_result.crs
                 transformer = Transformer.from_crs(f"EPSG:{crs_code}", "EPSG:4326", always_xy=True)
+                # Attach WGS84 outline to each candidate so the polygon-overlap infra
+                # filter can use it. c.outline (tile UTM) is preserved unchanged for
+                # downstream use (rim_slope_filter consumes it in tile UTM).
+                for c in candidates:
+                    c.outline_wgs84 = _transform_outline(c.outline, transformer) if c.outline is not None else None
                 import rasterio as _rio
                 with _rio.open(tile_result.dem_path) as _src:
                     _bnd = _src.bounds
