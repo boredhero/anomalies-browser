@@ -516,51 +516,41 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
                     raise RuntimeError(f"CRS transform produces infinity: EPSG:{crs_code} ({_bnd.left},{_bnd.bottom}) -> ({_test_lon},{_test_lat})")
                 log.info("crs_transform_ok", crs=crs_code, test_point=f"({round(_test_lon,4)},{round(_test_lat,4)})")
 
-                good = [c for c in candidates
-                        if c.score > 0.15
-                        and c.morphometrics.get("area_m2", 0) > 20
-                        and c.morphometrics.get("depth_m", 0) > 0.3
-                        and (c.morphometrics.get("depth_m", 0)
-                             or c.morphometrics.get("lrm_anomaly_m", 0)) < 150]
-                log.info("detection_filtered", tile=Path(tile_path).stem, after_filter=len(good), before_filter=len(candidates))
-                good.sort(key=lambda c: c.score, reverse=True)
-                good = good[:200]
-
-                # Transform centroids to WGS84, discard any with infinity/NaN coords
-                wgs84_points = []
-                for c in good:
+                # Transform centroids to WGS84 first; drop any with non-finite coords.
+                # (Done before the gate so the cap downstream evaluates over coord-valid
+                # candidates only.)
+                wgs84_points_all = []
+                for c in candidates:
                     lon, lat = transformer.transform(c.geometry.x, c.geometry.y)
                     if not (math.isfinite(lon) and math.isfinite(lat)):
                         log.warning("infinite_coord_skipped", geom_x=c.geometry.x, geom_y=c.geometry.y, score=round(c.score, 2))
-                        wgs84_points.append(None)
+                        wgs84_points_all.append(None)
                     else:
-                        wgs84_points.append((lon, lat))
-                paired = [(c, p) for c, p in zip(good, wgs84_points) if p is not None]
-                good = [c for c, _ in paired]
-                wgs84_points = [p for _, p in paired]
+                        wgs84_points_all.append((lon, lat))
+                paired_finite = [(c, p) for c, p in zip(candidates, wgs84_points_all) if p is not None]
+                candidates_finite = [c for c, _ in paired_finite]
+                coords_finite = [p for _, p in paired_finite]
                 _timings["crs_transform_s"] = round(time.perf_counter() - _t, 3)
 
-                # Filter out detections on buildings using OSM data
                 _t = time.perf_counter()
-                if wgs84_points:
+                if coords_finite:
+                    lons_all = [c[0] for c in coords_finite]
+                    lats_all = [c[1] for c in coords_finite]
+                    bbox = (min(lons_all), min(lats_all), max(lons_all), max(lats_all))
                     from hole_finder.detection.postprocess.building_filter import filter_candidates_by_buildings
-                    lons = [p[0] for p in wgs84_points]
-                    lats = [p[1] for p in wgs84_points]
-                    good_with_coords = filter_candidates_by_buildings(good, wgs84_points, min(lons), min(lats), max(lons), max(lats))
+                    from hole_finder.detection.postprocess.infrastructure_filter import filter_candidates_by_infrastructure
+                    from hole_finder.detection.postprocess.pipeline_glue import run_post_fuse_chain
+                    good_with_coords = run_post_fuse_chain(
+                        candidates_finite, coords_finite, bbox,
+                        cap=200,
+                        buildings_filter_func=filter_candidates_by_buildings,
+                        infra_filter_func=filter_candidates_by_infrastructure,
+                    )
                 else:
                     good_with_coords = []
-                _timings["building_filter_s"] = round(time.perf_counter() - _t, 3)
-
-                # Filter out detections on roads, waterways, and railways
-                _t = time.perf_counter()
-                if good_with_coords:
-                    from hole_finder.detection.postprocess.infrastructure_filter import filter_candidates_by_infrastructure
-                    candidates_for_infra = [item[0] for item in good_with_coords]
-                    coords_for_infra = [(item[1], item[2]) for item in good_with_coords]
-                    lons_i = [c[0] for c in coords_for_infra]
-                    lats_i = [c[1] for c in coords_for_infra]
-                    good_with_coords = filter_candidates_by_infrastructure(candidates_for_infra, coords_for_infra, min(lons_i), min(lats_i), max(lons_i), max(lats_i))
-                _timings["infra_filter_s"] = round(time.perf_counter() - _t, 3)
+                good = [item[0] for item in good_with_coords]
+                log.info("detection_filtered", tile=Path(tile_path).stem, after_filter=len(good), before_filter=len(candidates))
+                _timings["post_fuse_chain_s"] = round(time.perf_counter() - _t, 3)
 
                 # Store detections
                 _t = time.perf_counter()
