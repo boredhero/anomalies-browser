@@ -542,14 +542,19 @@ def run_full_pipeline(self, job_id: str, pass_config: str, bbox_geojson: dict):
                     lons_all = [c[0] for c in coords_finite]
                     lats_all = [c[1] for c in coords_finite]
                     bbox = (min(lons_all), min(lats_all), max(lons_all), max(lats_all))
+                    from functools import partial
                     from hole_finder.detection.postprocess.building_filter import filter_candidates_by_buildings
                     from hole_finder.detection.postprocess.infrastructure_filter import filter_candidates_by_infrastructure
                     from hole_finder.detection.postprocess.pipeline_glue import run_post_fuse_chain
+                    from hole_finder.detection.postprocess.rim_slope_filter import filter_candidates_by_rim_slope
+                    slope_path = tile_result.derivative_paths.get("slope")
+                    rim_filter_bound = partial(filter_candidates_by_rim_slope, slope_raster_path=slope_path)
                     good_with_coords = run_post_fuse_chain(
                         candidates_finite, coords_finite, bbox,
                         cap=200,
                         buildings_filter_func=filter_candidates_by_buildings,
                         infra_filter_func=filter_candidates_by_infrastructure,
+                        rim_filter_func=rim_filter_bound,
                     )
                 else:
                     good_with_coords = []

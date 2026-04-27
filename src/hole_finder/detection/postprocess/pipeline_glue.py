@@ -26,8 +26,9 @@ def run_post_fuse_chain(
     gate_kwargs: dict | None = None,
     buildings_filter_func: Callable | None = None,
     infra_filter_func: Callable | None = None,
+    rim_filter_func: Callable | None = None,
 ) -> list[tuple[Candidate, float, float]]:
-    """Run shape gate → buildings → infra → sort+cap. Returns (c, lon, lat) tuples.
+    """Run shape gate → buildings → infra → rim_slope → sort+cap. Returns (c, lon, lat) tuples.
 
     Args:
         candidates: list of fused Candidate objects.
@@ -38,6 +39,9 @@ def run_post_fuse_chain(
         buildings_filter_func: callable matching filter_candidates_by_buildings;
             None to skip the building filter.
         infra_filter_func: callable matching filter_candidates_by_infrastructure;
+            None to skip.
+        rim_filter_func: callable accepting list[(c, lon, lat)] and returning
+            same; production binds slope_raster_path via functools.partial.
             None to skip.
     """
     assert len(candidates) == len(wgs84_coords), (
@@ -65,5 +69,9 @@ def run_post_fuse_chain(
         cands = [item[0] for item in paired]
         coords = [(item[1], item[2]) for item in paired]
         paired = infra_filter_func(cands, coords, west, south, east, north)
+        if not paired:
+            return []
+    if rim_filter_func is not None:
+        paired = rim_filter_func(paired)
     paired.sort(key=lambda item: item[0].score, reverse=True)
     return paired[:cap]
